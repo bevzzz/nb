@@ -1,0 +1,365 @@
+package v4
+
+import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
+	"github.com/bevzzz/nb/decode"
+	"github.com/bevzzz/nb/schema"
+	"github.com/bevzzz/nb/schema/common"
+)
+
+func init() {
+	decode.RegisterDecoder(version, new(decoder))
+}
+
+var version = schema.Version{Major: 4, Minor: 4}
+
+type decoder struct{}
+
+func (d *decoder) DecodeMeta(data []byte) (schema.NotebookMetadata, error) {
+	var nm NotebookMetadata
+	if err := json.Unmarshal(data, &nm); err != nil {
+		return nil, err
+	}
+	return &nm, nil
+}
+
+func (d *decoder) DecodeCell(m map[string]interface{}, data []byte, meta schema.NotebookMetadata) (schema.Cell, error) {
+	var ct interface{}
+	var c schema.Cell
+	switch ct = m["cell_type"]; ct {
+	case "markdown":
+		c = &Markdown{}
+	case "raw":
+		c = &Raw{}
+	case "code":
+		c = &Code{Lang: meta.Language()}
+	default:
+		return nil, fmt.Errorf("unknown cell type %q", ct)
+	}
+	if err := json.Unmarshal(data, &c); err != nil {
+		return nil, fmt.Errorf("%s: %w", ct, err)
+	}
+	return c, nil
+}
+
+type NotebookMetadata struct {
+	Lang struct {
+		Name    string `json:"name"`
+		Version string `json:"version"`
+	} `json:"language_info"`
+}
+
+var _ schema.NotebookMetadata = (*NotebookMetadata)(nil)
+
+func (nm *NotebookMetadata) Language() string {
+	return nm.Lang.Name
+}
+
+// Markdown defines the schema for a "markdown" cell.
+type Markdown struct {
+	Source common.MultilineString `json:"source"`
+}
+
+var _ schema.Cell = (*Markdown)(nil)
+
+func (md *Markdown) CellType() schema.CellType {
+	return schema.Markdown
+}
+
+func (md *Markdown) MimeType() string {
+	return common.MarkdownText
+}
+
+func (md *Markdown) Type() schema.CellTypeMixed {
+	return schema.MarkdownCellType
+}
+
+func (md *Markdown) Text() []byte {
+	return md.Source.Text()
+}
+
+// Raw defines the schema for a "raw" cell.
+type Raw struct {
+	Source   common.MultilineString `json:"source"`
+	Metadata RawCellMetadata        `json:"metadata"`
+}
+
+var _ schema.Cell = (*Raw)(nil)
+
+func (raw *Raw) CellType() schema.CellType {
+	return schema.Raw
+}
+
+func (raw *Raw) MimeType() string {
+	return raw.Metadata.MimeType()
+}
+
+func (raw *Raw) Type() schema.CellTypeMixed {
+	return raw.Metadata.Type()
+}
+
+func (raw *Raw) Text() []byte {
+	return raw.Source.Text()
+}
+
+// RawCellMetadata may specify a target conversion format.
+type RawCellMetadata struct {
+	Format      *string `json:"format"`
+	RawMimeType *string `json:"raw_mimetype"`
+}
+
+// MimeType returns a more specific mime-type if one is provided and "text/plain" otherwise.
+func (raw *RawCellMetadata) MimeType() string {
+	switch {
+	case raw.Format != nil:
+		return *raw.Format
+	case raw.RawMimeType != nil:
+		return *raw.RawMimeType
+	default:
+		return common.PlainText
+	}
+}
+
+// Type returns a more specific mime-type if one is provided and "text/plain" otherwise.
+func (raw *RawCellMetadata) Type() schema.CellTypeMixed {
+	switch {
+	case raw.Format != nil:
+		return schema.CellTypeMixed(*raw.Format)
+	case raw.RawMimeType != nil:
+		return schema.CellTypeMixed(*raw.RawMimeType)
+	default:
+		return schema.PlainTextCellType
+	}
+}
+
+// Code defines the schema for a "code" cell.
+type Code struct {
+	Source        common.MultilineString `json:"source"`
+	TimesExecuted int                    `json:"execution_count"`
+	Out           []Output               `json:"outputs"`
+	Lang          string                 `json:"-"`
+}
+
+var _ schema.CodeCell = (*Code)(nil)
+var _ schema.Outputter = (*Code)(nil)
+
+func (code *Code) CellType() schema.CellType {
+	return schema.Code
+}
+
+// TODO: return correct mime type (add a function to common)
+func (code *Code) MimeType() string {
+	return "application/x-python"
+}
+
+func (code *Code) Type() schema.CellTypeMixed {
+	return schema.CodeCellType
+}
+
+func (code *Code) Text() []byte {
+	return code.Source.Text()
+}
+
+func (code *Code) Language() string {
+	return code.Lang
+}
+
+func (code *Code) ExecutionCount() int {
+	return code.TimesExecuted
+}
+
+func (code *Code) Outputs() (cells []schema.Cell) {
+	for i := range code.Out {
+		cells = append(cells, code.Out[i].cell)
+	}
+	return
+}
+
+// Outputs unmarshals cell outputs into schema.Cell based on their type.
+type Output struct {
+	cell schema.Cell
+}
+
+func (out *Output) UnmarshalJSON(data []byte) error {
+	var v map[string]interface{}
+	if err := json.Unmarshal(data, &v); err != nil {
+		return fmt.Errorf("code outputs: %w", err)
+	}
+
+	var t interface{}
+	var c schema.Cell
+	switch t = v["output_type"]; t {
+	case "stream":
+		c = &StreamOutput{}
+	case "display_data":
+		c = &DisplayDataOutput{}
+	case "execute_result":
+		c = &ExecuteResultOutput{}
+	case "error":
+		c = &ErrorOutput{}
+	default:
+		return fmt.Errorf("unknown output type %q", t)
+	}
+
+	if err := json.Unmarshal(data, &c); err != nil {
+		return fmt.Errorf("%q output: %w", t, err)
+	}
+	out.cell = c
+	return nil
+}
+
+// StreamOutput is a plain, text-based output of the executed code.
+// Depending on the stream "target", Type() can report "text/plain" (stdout) or "error" (stderr).
+// The output is often decorated with ANSI-color sequences, which should be handled separately.
+type StreamOutput struct {
+	// Target can be stdout or stderr.
+	Target string                 `json:"name"`
+	Source common.MultilineString `json:"text"`
+}
+
+var _ schema.Cell = (*StreamOutput)(nil)
+
+func (stream *StreamOutput) CellType() schema.CellType {
+	return schema.Stream
+}
+
+func (stream *StreamOutput) MimeType() string {
+	switch stream.Target {
+	case "stdout":
+		return common.Stdout
+	case "stderr":
+		return common.Stderr
+	}
+	return common.PlainText
+}
+
+func (stream *StreamOutput) Type() schema.CellTypeMixed {
+	switch stream.Target {
+	case "stdout":
+		return schema.StdoutCellType
+	case "stderr":
+		return schema.StderrCellType
+	}
+	return "text/plain"
+}
+
+func (stream *StreamOutput) Text() []byte {
+	return stream.Source.Text()
+}
+
+// DisplayDataOutput are rich-format outputs generated by running the code in the parent cell.
+type DisplayDataOutput struct {
+	MimeBundle `json:"data"`
+	Metadata   map[string]interface{} `json:"metadata"`
+}
+
+var _ schema.Cell = (*DisplayDataOutput)(nil)
+
+func (dd *DisplayDataOutput) CellType() schema.CellType {
+	return schema.DisplayData
+}
+
+// MimeBundle contains rich output data keyed by mime-type.
+type MimeBundle map[string]interface{}
+
+var _ schema.MimeBundle = (*MimeBundle)(nil)
+
+// MimeType returns the richer of the mime-types present in the bundle,
+// and falls back to "text/plain" otherwise.
+func (mb MimeBundle) MimeType() string {
+	for mime := range mb {
+		if mime != common.PlainText {
+			return mime
+		}
+	}
+	return common.PlainText
+}
+
+// Type returns the richer of the mime-types present in the bundle,
+// and falls back to "text/plain" otherwise.
+func (mb MimeBundle) Type() schema.CellTypeMixed {
+	for t := range mb {
+		if schema.CellTypeMixed(t) != schema.PlainTextCellType {
+			return schema.CellTypeMixed(t)
+		}
+	}
+	return schema.PlainTextCellType
+}
+
+// Text returns data with the richer mime-type.
+func (mb MimeBundle) Text() []byte {
+	return mb.Data(mb.MimeType())
+}
+
+// Data returns mime-type-specific content if present and a nil slice otherwise.
+func (mb MimeBundle) Data(mime string) []byte {
+	if txt, ok := mb[mime]; ok {
+
+		switch v := txt.(type) {
+		case []byte:
+			return v
+		case string:
+			return []byte(v)
+		// case []string: TODO: handle MultilineString case
+		case map[string]interface{}:
+			// TODO(optimization): see if there's a way to keep this as raw bytes during unmarshaling to doing the work twice.
+			if b, err := json.Marshal(txt); err == nil {
+				return b
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+// RawText returns data for "text/plain" mime-type and a nil slice otherwise.
+func (mb MimeBundle) PlainText() []byte {
+	return mb.Data(common.PlainText)
+}
+
+// ExecuteResultOutput is the result of executing the code in the cell.
+// Its contents are identical to those of DisplayDataOutput with the addition of the execution count.
+type ExecuteResultOutput struct {
+	DisplayDataOutput
+	TimesExecuted int `json:"execution_count"`
+}
+
+var _ schema.Cell = (*ExecuteResultOutput)(nil)
+var _ schema.ExecutionCounter = (*ExecuteResultOutput)(nil)
+
+func (ex *ExecuteResultOutput) CellType() schema.CellType {
+	return schema.ExecuteResult
+}
+
+func (ex *ExecuteResultOutput) ExecutionCount() int {
+	return ex.TimesExecuted
+}
+
+// ErrorOutput stores the output of a failed code execution.
+type ErrorOutput struct {
+	ExceptionName  string   `json:"ename"`
+	ExceptionValue string   `json:"evalue"`
+	Traceback      []string `json:"traceback"`
+}
+
+var _ schema.Cell = (*ErrorOutput)(nil)
+
+func (err *ErrorOutput) CellType() schema.CellType {
+	return schema.Error
+}
+
+func (err *ErrorOutput) MimeType() string {
+	return common.Stderr
+}
+
+func (err *ErrorOutput) Type() schema.CellTypeMixed {
+	return schema.StderrCellType
+}
+
+func (err *ErrorOutput) Text() (txt []byte) {
+	s := strings.Join(err.Traceback, "\n")
+	return []byte(s)
+}
