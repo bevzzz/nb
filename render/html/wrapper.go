@@ -276,10 +276,10 @@ func (attrs attributes) WriteTo(w io.Writer) (n64 int64, err error) {
 		return sorted[i].Key < sorted[j].Key
 	})
 
-	// class=""
 	for _, attr := range sorted {
 		s := " "
 		if attr.IsBool {
+			// FIXME: 'continue' prevents the attribute from being written.
 			s += attr.Key
 			continue
 		}

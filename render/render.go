@@ -13,7 +13,7 @@ type Renderer interface {
 	// Render writes the contents of the notebook cells it supports.
 	//
 	// Implementations should not error on cell types, for which no RenderCellFunc is registered.
-	// This is expected, as some [RawCells] will be renderered in some output formats and ignored in others.
+	// This is expected, as some [RawCells] will be rendered in some output formats and ignored in others.
 	//
 	// [RawCells]: https://nbformat.readthedocs.io/en/latest/format_description.html#raw-nbconvert-cells
 	Render(io.Writer, schema.Notebook) error
@@ -101,7 +101,7 @@ func (r *renderer) AddOptions(opts ...Option) {
 
 // Register registers a new RenderCellFunc for the cell type.
 //
-// Any previously registered functions will be overriden. All configurations
+// Any previously registered functions will be overridden. All configurations
 // should be done the first call to Render(), as later changes will have no effect.
 func (r *renderer) Register(t schema.CellTypeMixed, f RenderCellFunc) {
 	r.renderCellFuncsTmp[t] = f

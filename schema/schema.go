@@ -33,7 +33,7 @@ type Cell interface {
 	MimeType() string
 	Text() []byte
 
-	// Type will be superceeded with CellType in the following commits.
+	// Type will be superseded with CellType in the following commits.
 	Type() CellTypeMixed
 }
 
