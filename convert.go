@@ -3,8 +3,6 @@ package nb
 import (
 	"io"
 
-	_ "github.com/bevzzz/nb/schema/v4"
-
 	"github.com/bevzzz/nb/decode"
 	"github.com/bevzzz/nb/render"
 	"github.com/bevzzz/nb/render/html"
