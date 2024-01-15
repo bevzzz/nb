@@ -681,7 +681,7 @@ func (n *node) cmp(other *stdhtml.Node, status *htmlDiff) {
 	}
 }
 
-// findFirst fast-forwards to the first ocurrence of the <target> node and returns it.
+// findFirst fast-forwards to the first occurrence of the <target> node and returns it.
 // If the node is not in the tree, it will return nil.
 func findFirst(n *stdhtml.Node, target string) *stdhtml.Node {
 	if n.Type == stdhtml.ElementNode && n.Data == target {

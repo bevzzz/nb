@@ -9,9 +9,9 @@
 
 This package is inspired by @yuin's [`goldmark`](https://github.com/yuin/goldmark) and is designed to be as clear and extensible.
 
-The implementation follows the official [Jupyter Notebook format spec](https://nbformat.readthedocs.io/en/latest/format_description.html#the-notebook-file-format) (`nbformat`) and produces an output similar to that of [`nbconvert`](https://github.com/jupyter/nbconvert) (Jupyter's team own reference implementation) both structurally and visually. 
+The implementation follows the official [Jupyter Notebook format spec](https://nbformat.readthedocs.io/en/latest/format_description.html#the-notebook-file-format) (`nbformat`) and produces an output similar to that of [`nbconvert`](https://github.com/jupyter/nbconvert) (Jupyter's team own reference implementation) both structurally and visually.
 
-Although the current release only supports `v4.4` notebooks, support for other formats will be added soon (see the [**Roadmap**](#roadmap)).    
+Although the current release only supports `v4.4` notebooks, support for other formats will be added soon (see the [**Roadmap**](#roadmap-)).  
 The package comes with an HTML renderer out of the box and can be extended to convert notebooks to other formats, such as LaTeX or PDF.
 
 > 🏗 This package is being actively developed: its structure and APIs might change overtime.  
