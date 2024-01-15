@@ -1,5 +1,10 @@
 # nb
 
+[![Build status](https://github.com/bevzzz/nb/actions/workflows/build.yml/badge.svg?branch=ci)](https://github.com/bevzzz/nb/actions/workflows/build.yml?query=branch%3Amain)
+[![Go Reference](https://pkg.go.dev/badge/github.com/bevzzz/nb.svg)](https://pkg.go.dev/github.com/bevzzz/nb)
+[![Go Report Card](https://goreportcard.com/badge/github.com/bevzzz/nb)](https://goreportcard.com/report/github.com/bevzzz/nb)
+[![codecov](https://codecov.io/gh/bevzzz/nb/branch/main/graph/badge.svg?token=BS7XDXHA21)](https://codecov.io/gh/bevzzz/nb/tree/main)
+
 	Render Jupyter Notebooks in pure Go 📔
 
 This package is inspired by @yuin's [`goldmark`](https://github.com/yuin/goldmark) and is designed to be as clear and extensible.
