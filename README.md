@@ -53,7 +53,7 @@ c := nb.New(
 )
 
 err := c.Convert(&body, b)
-if er != nil {
+if err != nil {
 	panic(err)
 }
 
