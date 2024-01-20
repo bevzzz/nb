@@ -6,6 +6,7 @@ import (
 
 	"github.com/bevzzz/nb/render"
 	"github.com/bevzzz/nb/schema"
+	"github.com/bevzzz/nb/schema/common"
 )
 
 type Config struct {
@@ -28,8 +29,7 @@ type Renderer struct {
 	cfg Config
 }
 
-// NewRenderer configures a new HTML renderer.
-// By default, it embeds a *Wrapper and will panic if it is set to nil by one of the options.
+// NewRenderer configures a new HTML renderer and embeds a *Wrapper to implement render.CellWrapper.
 func NewRenderer(opts ...Option) *Renderer {
 	var cfg Config
 	for _, opt := range opts {
@@ -43,18 +43,23 @@ func NewRenderer(opts ...Option) *Renderer {
 	}
 }
 
-func (r *Renderer) RegisterFuncs(reg render.RenderCellFuncRegisterer) {
-	reg.Register(schema.MarkdownCellType, r.renderMarkdown)
-	reg.Register(schema.CodeCellType, r.renderCode)
-	reg.Register(schema.PNG, r.renderImage)
-	reg.Register(schema.JPEG, r.renderImage)
-	reg.Register(schema.HTML, r.renderRawHTML)
-	reg.Register(schema.JSON, r.renderRaw)
-	reg.Register(schema.StdoutCellType, r.renderRaw)
-	reg.Register(schema.StderrCellType, r.renderRaw)
-	reg.Register(schema.PlainTextCellType, r.renderRaw)
+func (r *Renderer) RegisterFuncs(reg render.RenderCellFuncRegistry) {
+	// r.renderMarkdown should provide exact MimeType to override "text/*".
+	reg.Register(render.Pref{Type: schema.Markdown, MimeType: common.MarkdownText}, r.renderMarkdown)
+	reg.Register(render.Pref{Type: schema.Code}, r.renderCode)
+
+	// Stream (stdout+stderr) and "error" outputs.
+	reg.Register(render.Pref{Type: schema.Stream}, r.renderRaw)
+	reg.Register(render.Pref{MimeType: common.Stderr}, r.renderRaw) // renders both "error" output and "stderr" stream
+
+	// Various types of raw cell contents and display_data/execute_result outputs.
+	reg.Register(render.Pref{MimeType: "application/json"}, r.renderRaw)
+	reg.Register(render.Pref{MimeType: "text/*"}, r.renderRaw)
+	reg.Register(render.Pref{MimeType: "text/html"}, r.renderRawHTML)
+	reg.Register(render.Pref{MimeType: "image/*"}, r.renderImage)
 }
 
+// renderMarkdown renders markdown cells as pre-formatted text.
 func (r *Renderer) renderMarkdown(w io.Writer, cell schema.Cell) error {
 	io.WriteString(w, "<pre>")
 	w.Write(cell.Text())
@@ -93,9 +98,10 @@ func (r *Renderer) renderRawHTML(w io.Writer, cell schema.Cell) error {
 	return nil
 }
 
+// renderImage writes base64-encoded image data.
 func (r *Renderer) renderImage(w io.Writer, cell schema.Cell) error {
 	io.WriteString(w, "<img src=\"data:")
-	io.WriteString(w, string(cell.Type()))
+	io.WriteString(w, string(cell.MimeType()))
 	io.WriteString(w, ";base64, ")
 	w.Write(cell.Text())
 	io.WriteString(w, "\" />\n")

@@ -57,7 +57,7 @@ func New(opts ...Option) *Notebook {
 
 // DefaultRenderer configures an HTML renderer.
 func DefaultRenderer() render.Renderer {
-	return render.New(
+	return render.NewRenderer(
 		render.WithCellRenderers(html.NewRenderer()),
 	)
 }

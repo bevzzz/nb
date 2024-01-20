@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/bevzzz/nb/render/html"
+	"github.com/bevzzz/nb/render/internal/test"
 	"github.com/bevzzz/nb/schema"
 	"github.com/bevzzz/nb/schema/common"
 )
@@ -26,7 +27,7 @@ func TestWrapper_Wrap(t *testing.T) {
 	}{
 		{
 			name: "markdown cell has jp-MarkdownCell class",
-			cell: markdown(""),
+			cell: test.Markdown(""),
 			want: &node{
 				tag: "div",
 				attr: map[string][]string{
@@ -40,7 +41,7 @@ func TestWrapper_Wrap(t *testing.T) {
 		},
 		{
 			name: "code cell has jp-CodeCell class",
-			cell: &Cell{ct: schema.Code},
+			cell: &test.Cell{CellType: schema.Code},
 			want: &node{
 				tag: "div",
 				attr: map[string][]string{
@@ -54,7 +55,7 @@ func TestWrapper_Wrap(t *testing.T) {
 		},
 		{
 			name: "raw cell has jp-RawCell class",
-			cell: &Cell{ct: schema.Raw},
+			cell: test.Raw("", common.PlainText),
 			want: &node{
 				tag: "div",
 				attr: map[string][]string{
@@ -114,7 +115,7 @@ func TestWrapper_WrapInput(t *testing.T) {
 	}{
 		{
 			name: "markdown input",
-			cell: markdown(""),
+			cell: test.Markdown(""),
 			want: &node{
 				tag: "div",
 				attr: map[string][]string{
@@ -148,7 +149,7 @@ func TestWrapper_WrapInput(t *testing.T) {
 		},
 		{
 			name: "raw input",
-			cell: &Cell{ct: schema.Raw},
+			cell: test.Raw("", common.PlainText),
 			want: &node{
 				tag: "div",
 				attr: map[string][]string{
@@ -171,9 +172,9 @@ func TestWrapper_WrapInput(t *testing.T) {
 		},
 		{
 			name: "code cell has a div additional classes and a non-empty prompt",
-			cell: &CodeCell{
-				Cell:           Cell{ct: schema.Code},
-				executionCount: 10,
+			cell: &test.CodeCell{
+				Cell:          test.Cell{CellType: schema.Code},
+				TimesExecuted: 10,
 			},
 			want: &node{
 				tag: "div",
@@ -275,7 +276,7 @@ func TestWrapper_WrapOutput(t *testing.T) {
 		{
 			name: "stream output to stdout",
 			out: []schema.Cell{
-				stdout(""),
+				test.Stdout(""),
 			},
 			want: outputArea([]*node{
 				{
@@ -300,7 +301,7 @@ func TestWrapper_WrapOutput(t *testing.T) {
 		{
 			name: "stream output to stderr",
 			out: []schema.Cell{
-				stderr(""),
+				test.Stderr(""),
 			},
 			want: outputArea([]*node{
 				{
@@ -325,7 +326,7 @@ func TestWrapper_WrapOutput(t *testing.T) {
 		{
 			name: "error output",
 			out: []schema.Cell{
-				&Cell{ct: schema.Error, mimeType: common.Stderr},
+				test.ErrorOutput(""),
 			},
 			want: outputArea([]*node{
 				{
@@ -349,7 +350,7 @@ func TestWrapper_WrapOutput(t *testing.T) {
 		{
 			name: "display data image/png",
 			out: []schema.Cell{
-				displaydata("image/png", "base64-encoded-image"),
+				test.DisplayData("base64-encoded-image", "image/png"),
 			},
 			want: outputArea([]*node{
 				{
@@ -373,7 +374,7 @@ func TestWrapper_WrapOutput(t *testing.T) {
 		{
 			name: "display data image/jpeg",
 			out: []schema.Cell{
-				displaydata("image/jpeg", "base64-encoded-image"),
+				test.DisplayData("base64-encoded-image", "image/jpeg"),
 			},
 			want: outputArea([]*node{
 				{
@@ -397,14 +398,7 @@ func TestWrapper_WrapOutput(t *testing.T) {
 		{
 			name: "execute result text/html",
 			out: []schema.Cell{
-				&ExecuteResultOutput{
-					Cell: Cell{
-						ct:       schema.ExecuteResult,
-						mimeType: "text/html",
-						source:   []byte(`<img src="https://images.unsplash.com/photo" height="300"/>`),
-					},
-					executionCount: 10,
-				},
+				test.ExecuteResult(`<img src="https://images.unsplash.com/photo" height="300"/>`, "text/html", 10),
 			},
 			want: outputArea([]*node{
 				{
@@ -429,14 +423,7 @@ func TestWrapper_WrapOutput(t *testing.T) {
 		{
 			name: "execute result application/json",
 			out: []schema.Cell{
-				&ExecuteResultOutput{
-					Cell: Cell{
-						ct:       schema.ExecuteResult,
-						mimeType: "application/json",
-						source:   []byte(`{"one":1,"two":2}`),
-					},
-					executionCount: 10,
-				},
+				test.ExecuteResult(`{"one":1,"two":2}`, "application/json", 10),
 			},
 			want: outputArea([]*node{
 				{
@@ -724,13 +711,9 @@ func contains(s []string, v string) bool {
 	return false
 }
 
-// trimN trims 1 leading and 1 trailing character in cutset.
+// trim1 trims 1 leading and 1 trailing character in cutset.
 func trim1(s string, cutset string) string {
-	if strings.HasPrefix(s, cutset) {
-		s = strings.TrimPrefix(s, cutset)
-	}
-	if strings.HasSuffix(s, cutset) {
-		s = strings.TrimSuffix(s, cutset)
-	}
+	s = strings.TrimPrefix(s, cutset)
+	s = strings.TrimSuffix(s, cutset)
 	return s
 }

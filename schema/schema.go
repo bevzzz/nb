@@ -29,12 +29,9 @@ type NotebookMetadata interface {
 
 // Cell encapsulates the raw content of each notebook cell and its designated mime-type.
 type Cell interface {
-	CellType() CellType
+	Type() CellType
 	MimeType() string
 	Text() []byte
-
-	// Type will be superseded with CellType in the following commits.
-	Type() CellTypeMixed
 }
 
 // CellType reports the intended cell type to the components that work
