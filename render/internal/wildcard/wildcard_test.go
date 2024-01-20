@@ -59,6 +59,16 @@ func TestMatch(t *testing.T) {
 			wantMatch: []string{"book", "books", "bookie", "back"},
 			noMatch:   []string{"battle"},
 		},
+		{
+			name:      "both pattern and s empty",
+			pattern:   "",
+			wantMatch: []string{""},
+		},
+		{
+			name:    "empty input with non-trivial pattern",
+			pattern: "s*mething",
+			noMatch: []string{""},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, s := range tt.wantMatch {

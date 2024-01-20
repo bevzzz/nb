@@ -8,7 +8,7 @@ import "strings"
 func Match(pattern, s string) bool {
 	if pattern == "*" || pattern == s {
 		return true
-	} else if pattern == "" {
+	} else if (pattern == "") != (s == "") {
 		return false
 	}
 	return match(pattern, s)
