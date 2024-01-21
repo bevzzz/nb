@@ -20,15 +20,22 @@ type Converter interface {
 	Convert(w io.Writer, source []byte) error
 }
 
+// WithExtensions adds extensions.
+func WithExtensions(exts ...Extension) Option {
+	return func(n *Notebook) {
+		n.extensions = append(n.extensions, exts...)
+	}
+}
+
 // WithRenderer sets a new notebook renderer.
-// This option should be supplied before passing any WithRenderOptions.
+// Set this option before passing any WithRenderOptions.
 func WithRenderer(r render.Renderer) Option {
 	return func(n *Notebook) {
 		n.renderer = r
 	}
 }
 
-// WithRendererOptions adds configuration to the notebook renderer.
+// WithRendererOptions adds configuration to the current notebook renderer.
 func WithRenderOptions(opts ...render.Option) Option {
 	return func(n *Notebook) {
 		n.renderer.AddOptions(opts...)
@@ -37,7 +44,8 @@ func WithRenderOptions(opts ...render.Option) Option {
 
 // Notebook is an extensible Converter implementation.
 type Notebook struct {
-	renderer render.Renderer
+	renderer   render.Renderer
+	extensions []Extension
 }
 
 var _ Converter = (*Notebook)(nil)
@@ -51,6 +59,9 @@ func New(opts ...Option) *Notebook {
 	}
 	for _, opt := range opts {
 		opt(&nb)
+	}
+	for _, ext := range nb.extensions {
+		ext.Extend(&nb)
 	}
 	return &nb
 }
@@ -70,4 +81,14 @@ func (n *Notebook) Convert(w io.Writer, source []byte) error {
 		return err
 	}
 	return n.renderer.Render(w, nb)
+}
+
+// Renderer exposes current renderer, allowing it to be further configured and/or extended.
+func (n *Notebook) Renderer() render.Renderer {
+	return n.renderer
+}
+
+// Extension adds new capabilities to the base Notebook.
+type Extension interface {
+	Extend(n *Notebook)
 }
