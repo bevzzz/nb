@@ -161,7 +161,7 @@ func TestOptions(t *testing.T) {
 	})
 }
 
-// spyRenderer records info about that calls that were made to its methods.
+// spyRenderer records info about options that were applied to it.
 type spyRenderer struct{ AddedOptions []render.Option }
 
 func (r *spyRenderer) Render(io.Writer, schema.Notebook) error { return nil }

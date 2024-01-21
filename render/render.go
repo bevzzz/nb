@@ -81,7 +81,7 @@ type renderer struct {
 	once        sync.Once
 	cellWrapper CellWrapper
 
-	renderCellFuncsTmp map[Pref]RenderCellFunc // funcPrefsTmp holds intermediary preference entries.
+	renderCellFuncsTmp map[Pref]RenderCellFunc // renderCellFuncsTmp holds intermediary preference entries.
 	renderCellFuncs    prefs                   // renderCellFuncs is sorted and will only be modified once.
 }
 
