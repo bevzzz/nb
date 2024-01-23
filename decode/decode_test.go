@@ -391,7 +391,7 @@ func TestDecodeBytes(t *testing.T) {
 // checkCell compares the cell's type and content to expected.
 func checkCell(tb testing.TB, got schema.Cell, want Cell) {
 	tb.Helper()
-	require.Equalf(tb, want.Type, got.CellType(), "reported cell type: want %q, got %q", want.Type, got.CellType())
+	require.Equalf(tb, want.Type, got.Type(), "reported cell type: want %q, got %q", want.Type, got.Type())
 	require.Equal(tb, want.MimeType, got.MimeType(), "reported mime type")
 	if got, want := got.Text(), want.Text; !bytes.Equal(want, got) {
 		tb.Errorf("text:\n(+want) %q\n(-got) %q", want, got)

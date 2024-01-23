@@ -65,16 +65,12 @@ type Markdown struct {
 
 var _ schema.Cell = (*Markdown)(nil)
 
-func (md *Markdown) CellType() schema.CellType {
+func (md *Markdown) Type() schema.CellType {
 	return schema.Markdown
 }
 
 func (md *Markdown) MimeType() string {
 	return common.MarkdownText
-}
-
-func (md *Markdown) Type() schema.CellTypeMixed {
-	return schema.MarkdownCellType
 }
 
 func (md *Markdown) Text() []byte {
@@ -89,16 +85,12 @@ type Raw struct {
 
 var _ schema.Cell = (*Raw)(nil)
 
-func (raw *Raw) CellType() schema.CellType {
+func (raw *Raw) Type() schema.CellType {
 	return schema.Raw
 }
 
 func (raw *Raw) MimeType() string {
 	return raw.Metadata.MimeType()
-}
-
-func (raw *Raw) Type() schema.CellTypeMixed {
-	return raw.Metadata.Type()
 }
 
 func (raw *Raw) Text() []byte {
@@ -123,18 +115,6 @@ func (raw *RawCellMetadata) MimeType() string {
 	}
 }
 
-// Type returns a more specific mime-type if one is provided and "text/plain" otherwise.
-func (raw *RawCellMetadata) Type() schema.CellTypeMixed {
-	switch {
-	case raw.Format != nil:
-		return schema.CellTypeMixed(*raw.Format)
-	case raw.RawMimeType != nil:
-		return schema.CellTypeMixed(*raw.RawMimeType)
-	default:
-		return schema.PlainTextCellType
-	}
-}
-
 // Code defines the schema for a "code" cell.
 type Code struct {
 	Source        common.MultilineString `json:"source"`
@@ -146,17 +126,13 @@ type Code struct {
 var _ schema.CodeCell = (*Code)(nil)
 var _ schema.Outputter = (*Code)(nil)
 
-func (code *Code) CellType() schema.CellType {
+func (code *Code) Type() schema.CellType {
 	return schema.Code
 }
 
 // TODO: return correct mime type (add a function to common)
 func (code *Code) MimeType() string {
 	return "application/x-python"
-}
-
-func (code *Code) Type() schema.CellTypeMixed {
-	return schema.CodeCellType
 }
 
 func (code *Code) Text() []byte {
@@ -222,7 +198,7 @@ type StreamOutput struct {
 
 var _ schema.Cell = (*StreamOutput)(nil)
 
-func (stream *StreamOutput) CellType() schema.CellType {
+func (stream *StreamOutput) Type() schema.CellType {
 	return schema.Stream
 }
 
@@ -234,16 +210,6 @@ func (stream *StreamOutput) MimeType() string {
 		return common.Stderr
 	}
 	return common.PlainText
-}
-
-func (stream *StreamOutput) Type() schema.CellTypeMixed {
-	switch stream.Target {
-	case "stdout":
-		return schema.StdoutCellType
-	case "stderr":
-		return schema.StderrCellType
-	}
-	return "text/plain"
 }
 
 func (stream *StreamOutput) Text() []byte {
@@ -258,7 +224,7 @@ type DisplayDataOutput struct {
 
 var _ schema.Cell = (*DisplayDataOutput)(nil)
 
-func (dd *DisplayDataOutput) CellType() schema.CellType {
+func (dd *DisplayDataOutput) Type() schema.CellType {
 	return schema.DisplayData
 }
 
@@ -276,17 +242,6 @@ func (mb MimeBundle) MimeType() string {
 		}
 	}
 	return common.PlainText
-}
-
-// Type returns the richer of the mime-types present in the bundle,
-// and falls back to "text/plain" otherwise.
-func (mb MimeBundle) Type() schema.CellTypeMixed {
-	for t := range mb {
-		if schema.CellTypeMixed(t) != schema.PlainTextCellType {
-			return schema.CellTypeMixed(t)
-		}
-	}
-	return schema.PlainTextCellType
 }
 
 // Text returns data with the richer mime-type.
@@ -330,7 +285,7 @@ type ExecuteResultOutput struct {
 var _ schema.Cell = (*ExecuteResultOutput)(nil)
 var _ schema.ExecutionCounter = (*ExecuteResultOutput)(nil)
 
-func (ex *ExecuteResultOutput) CellType() schema.CellType {
+func (ex *ExecuteResultOutput) Type() schema.CellType {
 	return schema.ExecuteResult
 }
 
@@ -347,16 +302,12 @@ type ErrorOutput struct {
 
 var _ schema.Cell = (*ErrorOutput)(nil)
 
-func (err *ErrorOutput) CellType() schema.CellType {
+func (err *ErrorOutput) Type() schema.CellType {
 	return schema.Error
 }
 
 func (err *ErrorOutput) MimeType() string {
 	return common.Stderr
-}
-
-func (err *ErrorOutput) Type() schema.CellTypeMixed {
-	return schema.StderrCellType
 }
 
 func (err *ErrorOutput) Text() (txt []byte) {

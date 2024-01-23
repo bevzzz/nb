@@ -10,11 +10,14 @@ import (
 	"testing"
 
 	"github.com/bevzzz/nb"
+	"github.com/bevzzz/nb/render"
+	"github.com/bevzzz/nb/render/html"
+	"github.com/bevzzz/nb/schema"
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 )
 
-// update allows updating golden files via `go test -update`
+// update allows updating golden files via `go test -update`.
 var update = flag.Bool("update", false, "update .golden files in testdata/")
 
 func TestMain(m *testing.M) {
@@ -103,4 +106,77 @@ func cmpGolden(tb testing.TB, goldenFile string, got []byte, upd bool) {
 	} else {
 		tb.Logf("failed to save %s: %v", dotnew, err)
 	}
+}
+
+func TestOptions(t *testing.T) {
+	t.Run("WithRenderer", func(t *testing.T) {
+		// Arrange
+		r := render.NewRenderer()
+
+		// Act
+		n := nb.New(nb.WithRenderer(r))
+
+		// Assert
+		if n.Renderer() != r {
+			t.Error("option was not applied")
+		}
+	})
+
+	t.Run("WithRendererOptions", func(t *testing.T) {
+		// Arrange
+		var spy spyRenderer
+
+		// Act
+		_ = nb.New(
+			nb.WithRenderer(&spy),
+			nb.WithRenderOptions(
+				render.WithCellRenderers(html.NewRenderer()),
+				render.WithCellRenderers(html.NewRenderer()),
+			),
+		)
+
+		// Assert
+		if l := len(spy.AddedOptions); l != 2 {
+			t.Errorf("expected %d options applied, got %d", 2, l)
+		}
+	})
+
+	t.Run("WithExtensions", func(t *testing.T) {
+		// Arrange
+		var spy spyRenderer
+		ext := mockExtension{options: []render.Option{
+			render.WithCellRenderers(html.NewRenderer()),
+		}}
+
+		// Act
+		_ = nb.New(
+			nb.WithRenderer(&spy),
+			nb.WithExtensions(&ext),
+		)
+
+		// Assert
+		if len(spy.AddedOptions) == 0 {
+			t.Errorf("option not applied or applied incorrectly")
+		}
+	})
+}
+
+// spyRenderer records info about options that were applied to it.
+type spyRenderer struct{ AddedOptions []render.Option }
+
+func (r *spyRenderer) Render(io.Writer, schema.Notebook) error { return nil }
+
+func (r *spyRenderer) AddOptions(opts ...render.Option) {
+	r.AddedOptions = append(r.AddedOptions, opts...)
+}
+
+// mockExtension extends Notebook's renderer with options.
+type mockExtension struct {
+	options []render.Option
+}
+
+var _ nb.Extension = (*mockExtension)(nil)
+
+func (ext *mockExtension) Extend(n *nb.Notebook) {
+	n.Renderer().AddOptions(ext.options...)
 }

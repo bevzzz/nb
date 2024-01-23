@@ -31,7 +31,7 @@ func (wr *Wrapper) Wrap(w io.Writer, cell schema.Cell, render render.RenderCellF
 	}
 
 	var ct string
-	switch cell.CellType() {
+	switch cell.Type() {
 	case schema.Markdown:
 		ct = "jp-MarkdownCell"
 	case schema.Code:
@@ -68,8 +68,8 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 	}
 	div.Close(w)
 
-	isCode := cell.CellType() == schema.Code
-	isMd := cell.CellType() == schema.Markdown
+	isCode := cell.Type() == schema.Code
+	isMd := cell.Type() == schema.Markdown
 	if isCode {
 		div.Open(w, attributes{
 			"class": {
@@ -119,7 +119,7 @@ func (wr *Wrapper) WrapOutput(w io.Writer, cell schema.Outputter, render render.
 		datamimetype = outs[0].MimeType()
 		first := outs[0]
 
-		switch first.CellType() {
+		switch first.Type() {
 		case schema.ExecuteResult:
 			outputtypeclass = "jp-OutputArea-executeResult"
 			child = true
