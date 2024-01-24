@@ -122,7 +122,7 @@ func (r *renderer) init() {
 				Render: rf,
 			})
 		}
-		sort.Sort(r.renderCellFuncs)
+		r.renderCellFuncs.Sort()
 	})
 }
 
@@ -250,6 +250,11 @@ type pref struct {
 type prefs []pref
 
 var _ sort.Interface = (*prefs)(nil)
+
+// Sort preferences from most specific to least specific.
+func (s prefs) Sort() {
+	sort.Sort(s)
+}
 
 // Len is the number of pref elements.
 func (s prefs) Len() int {
