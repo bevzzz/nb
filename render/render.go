@@ -46,18 +46,23 @@ type RenderCellFuncRegistry interface {
 // RenderCellFunc writes contents of a specific cell type.
 type RenderCellFunc func(io.Writer, schema.Cell) error
 
-type Option func(r *renderer)
+type Config struct {
+	CellWrapper
+	CellRenderers []CellRenderer
+}
+
+type Option func(*Config)
 
 // WithCellRenderers adds support for other cell types to the base renderer.
 // If a renderer implements CellWrapper, it will be used to wrap input and output cells.
 // Only one cell wrapper can be configured, and so the last implementor will take precedence.
 func WithCellRenderers(crs ...CellRenderer) Option {
-	return func(r *renderer) {
+	return func(cfg *Config) {
 		for _, cr := range crs {
-			cr.RegisterFuncs(r)
+			cfg.CellRenderers = append(cfg.CellRenderers, cr)
 
 			if cw, ok := cr.(CellWrapper); ok {
-				r.cellWrapper = cw
+				cfg.CellWrapper = cw
 			}
 		}
 	}
@@ -78,9 +83,10 @@ type CellWrapper interface {
 // renderer is a base Renderer implementation.
 // It does not support any cell types out of the box and should be extended by the client using the available Options.
 type renderer struct {
-	once        sync.Once
-	cellWrapper CellWrapper
+	once   sync.Once
+	config Config
 
+	cellWrapper        CellWrapper
 	renderCellFuncsTmp map[Pref]RenderCellFunc // renderCellFuncsTmp holds intermediary preference entries.
 	renderCellFuncs    prefs                   // renderCellFuncs is sorted and will only be modified once.
 }
@@ -90,7 +96,6 @@ var _ RenderCellFuncRegistry = (*renderer)(nil)
 // NewRenderer extends the base renderer with the passed options.
 func NewRenderer(opts ...Option) Renderer {
 	r := renderer{
-		cellWrapper:        nil,
 		renderCellFuncsTmp: make(map[Pref]RenderCellFunc),
 	}
 	r.AddOptions(opts...)
@@ -102,7 +107,7 @@ var _ RenderCellFuncRegistry = (*renderer)(nil)
 
 func (r *renderer) AddOptions(opts ...Option) {
 	for _, opt := range opts {
-		opt(r)
+		opt(&r.config)
 	}
 }
 
@@ -116,6 +121,10 @@ func (r *renderer) Register(pref Pref, f RenderCellFunc) {
 
 func (r *renderer) init() {
 	r.once.Do(func() {
+		r.cellWrapper = r.config.CellWrapper
+		for _, cr := range r.config.CellRenderers {
+			cr.RegisterFuncs(r)
+		}
 		for p, rf := range r.renderCellFuncsTmp {
 			r.renderCellFuncs = append(r.renderCellFuncs, pref{
 				Pref:   p,
