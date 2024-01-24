@@ -8,19 +8,19 @@ import (
 )
 
 // NewMarkdown overrides the default rendering function for markdown cells.
-// 
+//
 // While its lax signature allows passing any arbitrary RenderCellFunc,
 // it will be best used to extend nb with existing markdown converters.
-// Package extension/markdown offers elegant wrappers for some of the popular options:
+// Package extension/adapters offers elegant wrappers for some of the popular options:
 //
 //	extension.NewMarkdown(
-//		markdown.Blackfriday(blackfriday.MarkdownCommon)
+//		adapter.Blackfriday(blackfriday.MarkdownCommon)
 //	)
 //
 // or
 //
 //	extension.NewMarkdown(
-//		markdown.Goldmark(func(b []byte, w io.Writer) error {
+//		adapter.Goldmark(func(b []byte, w io.Writer) error {
 //			return goldmark.Convert(b, w)
 //		})
 //	)
