@@ -166,7 +166,15 @@ func (mb mimebundle) MimeType() string {
 }
 
 func (mb mimebundle) Text() []byte {
-	return mb[mb.MimeType()].([]byte)
+	if txt, ok := mb[mb.MimeType()]; ok {
+		switch v := txt.(type) {
+		case []byte:
+			return v
+		case string:
+			return []byte(v)
+		}
+	}
+	return nil
 }
 
 func (mb mimebundle) PlainText() []byte {
