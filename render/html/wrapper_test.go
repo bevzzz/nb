@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/bevzzz/nb/internal/test"
+	"github.com/bevzzz/nb/pkg/test"
 	"github.com/bevzzz/nb/render/html"
 	"github.com/bevzzz/nb/schema"
 	"github.com/bevzzz/nb/schema/common"

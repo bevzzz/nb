@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/bevzzz/nb/extension/adapter"
-	"github.com/bevzzz/nb/internal/test"
+	"github.com/bevzzz/nb/pkg/test"
 	"github.com/bevzzz/nb/render"
 	"github.com/bevzzz/nb/schema"
 )

@@ -1,3 +1,7 @@
+// Package test provides test doubles that implement some of nb interfaces.
+// Authors of nb-extension packages are encouraged to use them as they make
+// for a uniform test code across different packages.
+// See it's example usages in schema/**/*_test.go files.
 package test
 
 import (
@@ -95,3 +99,79 @@ var _ schema.Notebook = (*cells)(nil)
 func (n cells) Version() (v schema.Version) { return }
 
 func (n cells) Cells() []schema.Cell { return n }
+
+// WithAttachments creates a cell that has an attachment.
+//
+// The underlying test implementation for schema.MimeBundle accesses
+// its keys in a random order and should always be created with 1 element only
+// to keep test outcomes stable and predictable.
+//
+// Example:
+//
+//	test.WithAttachments(
+//		test.Markdown("![img](attachment:photo:png)"),
+//		"photo.png",
+//		map[string]interface{"image/png": "base64-encoded-image"}
+//	)
+func WithAttachment(c schema.Cell, filename string, mimebundle map[string]interface{}) interface {
+	schema.Cell
+	schema.HasAttachments
+} {
+	return &struct {
+		schema.Cell
+		schema.HasAttachments
+	}{
+		Cell: c,
+		HasAttachments: &cellAttachment{
+			filename: filename,
+			mb:       mimebundle,
+		},
+	}
+}
+
+// cellWithAttachment fakes a single cell attachment.
+type cellAttachment struct {
+	filename string
+	mb       mimebundle
+}
+
+var _ schema.HasAttachments = (*cellAttachment)(nil)
+var _ schema.Attachments = (*cellAttachment)(nil)
+
+func (c *cellAttachment) Attachments() schema.Attachments {
+	return c
+}
+
+// MimeBundle returns the underlying mime-bundle if the filename matches.
+func (c *cellAttachment) MimeBundle(filename string) schema.MimeBundle {
+	if filename != c.filename {
+		return nil
+	}
+	return c.mb
+}
+
+// mimebundle is a mock implementation of schema.MimeBundle, which always
+// returns the mime-type and content of its first (random access) element.
+// It does not differentiate between "richer" mime-types and should not be
+// created with more than one entry to keep the tests stable and reproducible.
+type mimebundle map[string]interface{}
+
+var _ schema.MimeBundle = new(mimebundle)
+
+func (mb mimebundle) MimeType() string {
+	for mt := range mb {
+		return mt
+	}
+	return common.PlainText
+}
+
+func (mb mimebundle) Text() []byte {
+	return mb[mb.MimeType()].([]byte)
+}
+
+func (mb mimebundle) PlainText() []byte {
+	if mb.MimeType() == common.PlainText {
+		return mb.Text()
+	}
+	return nil
+}

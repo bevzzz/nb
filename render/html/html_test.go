@@ -9,7 +9,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/require"
 
-	"github.com/bevzzz/nb/internal/test"
+	"github.com/bevzzz/nb/pkg/test"
 	"github.com/bevzzz/nb/render"
 	"github.com/bevzzz/nb/render/html"
 	"github.com/bevzzz/nb/schema"

@@ -19,6 +19,17 @@ type Cell struct {
 	Text     []byte
 }
 
+type WithAttachments struct {
+	Cell
+	Filename string
+	MimeType string
+	Data     []byte
+}
+
+func (w WithAttachments) HasAttachments() bool {
+	return w.Filename != ""
+}
+
 func TestDecodeBytes(t *testing.T) {
 	t.Run("notebook", func(t *testing.T) {
 		for _, tt := range []struct {
@@ -54,19 +65,30 @@ func TestDecodeBytes(t *testing.T) {
 		for _, tt := range []struct {
 			name string
 			json string
-			want Cell
+			want WithAttachments
 		}{
 			{
 				name: "v4.4",
 				json: `{
 					"nbformat": 4, "nbformat_minor": 4, "metadata": {}, "cells": [
-						{"cell_type": "markdown", "metadata": {}, "source": ["Join", " ", "me"]}
+						{"cell_type": "markdown", "metadata": {}, "source": [
+							"Look", " at ", "me: ![alt](attachment:photo.png)"
+						], "attachments": {
+							"photo.png": {
+								"image/png": "base64-encoded-image-data"
+							}
+						}}
 					]
 				}`,
-				want: Cell{
-					Type:     schema.Markdown,
-					MimeType: common.MarkdownText,
-					Text:     []byte("Join me"),
+				want: WithAttachments{
+					Cell: Cell{
+						Type:     schema.Markdown,
+						MimeType: common.MarkdownText,
+						Text:     []byte("Look at me: ![alt](attachment:photo.png)"),
+					},
+					Filename: "photo.png",
+					MimeType: "image/png",
+					Data:     []byte("base64-encoded-image-data"),
 				},
 			},
 		} {
@@ -77,7 +99,7 @@ func TestDecodeBytes(t *testing.T) {
 				got := nb.Cells()
 				require.Len(t, got, 1, "expected 1 cell")
 
-				checkCell(t, got[0], tt.want)
+				checkCellWithAttachments(t, got[0], tt.want)
 			})
 		}
 	})
@@ -86,7 +108,7 @@ func TestDecodeBytes(t *testing.T) {
 		for _, tt := range []struct {
 			name string
 			json string
-			want Cell
+			want WithAttachments
 		}{
 			{
 				name: "v4.4: no explicit mime-type",
@@ -95,11 +117,11 @@ func TestDecodeBytes(t *testing.T) {
 						{"cell_type": "raw", "source": ["Plain as the nose on your face"]}
 					]
 				}`,
-				want: Cell{
+				want: WithAttachments{Cell: Cell{
 					Type:     schema.Raw,
 					MimeType: common.PlainText,
 					Text:     []byte("Plain as the nose on your face"),
-				},
+				}},
 			},
 			{
 				name: "v4.4: metadata.format has specific mime-type",
@@ -108,11 +130,11 @@ func TestDecodeBytes(t *testing.T) {
 						{"cell_type": "raw", "metadata": {"format": "text/html"}, "source": ["<p>Hi, mom!</p>"]}
 					]
 				}`,
-				want: Cell{
+				want: WithAttachments{Cell: Cell{
 					Type:     schema.Raw,
 					MimeType: "text/html",
 					Text:     []byte("<p>Hi, mom!</p>"),
-				},
+				}},
 			},
 			{
 				name: "v4.4: metadata.raw_mimetype has specific mime-type",
@@ -121,10 +143,35 @@ func TestDecodeBytes(t *testing.T) {
 						{"cell_type": "raw", "metadata": {"raw_mimetype": "application/x-latex"}, "source": ["$$"]}
 					]
 				}`,
-				want: Cell{
+				want: WithAttachments{Cell: Cell{
 					Type:     schema.Raw,
 					MimeType: "application/x-latex",
 					Text:     []byte("$$"),
+				}},
+			},
+			{
+				name: "v4.4: with attachments",
+				json: `{
+					"nbformat": 4, "nbformat_minor": 4, "metadata": {}, "cells": [
+						{
+							"cell_type": "raw", "metadata": {},
+							"source": ["![alt](attachment:photo.png)"], "attachments": {
+								"photo.png": {
+									"image/png": "base64-encoded-image-data"
+								}
+							}
+						}
+					]
+				}`,
+				want: WithAttachments{
+					Cell: Cell{
+						Type:     schema.Raw,
+						MimeType: common.PlainText,
+						Text:     []byte("![alt](attachment:photo.png)"),
+					},
+					Filename: "photo.png",
+					MimeType: "image/png",
+					Data:     []byte("base64-encoded-image-data"),
 				},
 			},
 		} {
@@ -135,7 +182,7 @@ func TestDecodeBytes(t *testing.T) {
 				got := nb.Cells()
 				require.Len(t, got, 1, "expected 1 cell")
 
-				checkCell(t, got[0], tt.want)
+				checkCellWithAttachments(t, got[0], tt.want)
 			})
 		}
 	})
@@ -396,6 +443,29 @@ func checkCell(tb testing.TB, got schema.Cell, want Cell) {
 	if got, want := got.Text(), want.Text; !bytes.Equal(want, got) {
 		tb.Errorf("text:\n(+want) %q\n(-got) %q", want, got)
 	}
+}
+
+// checkCellWithAttachments compares the cell's type, content, and attachments to expected.
+func checkCellWithAttachments(tb testing.TB, got schema.Cell, want WithAttachments) {
+	tb.Helper()
+	checkCell(tb, got, want.Cell)
+	if !want.HasAttachments() {
+		return
+	}
+
+	cell, ok := got.(schema.HasAttachments)
+	if !ok {
+		tb.Fatal("cell has no attachments (does not implement schema.HasAttachments)")
+	}
+
+	var mb schema.MimeBundle
+	att := cell.Attachments()
+	if mb = att.MimeBundle(want.Filename); mb == nil {
+		tb.Fatalf("no data for %s, want %q", want.Filename, want.Data)
+	}
+
+	require.Equal(tb, want.MimeType, mb.MimeType(), "reported mime-type")
+	require.Equal(tb, want.Data, mb.Text(), "attachment data")
 }
 
 // toCodeCell fails the test if the cell does not implement schema.CodeCell.

@@ -9,7 +9,7 @@ import (
 type Notebook struct {
 	VersionMajor int               `json:"nbformat"`
 	VersionMinor int               `json:"nbformat_minor"`
-	Metadata     json.RawMessage   `json:"metadata"`
+	Metadata     json.RawMessage   `json:"metadata"` // TODO: omitempty
 	Cells        []json.RawMessage `json:"cells"`
 }
 

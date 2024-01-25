@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bevzzz/nb/internal/test"
+	"github.com/bevzzz/nb/pkg/test"
 	"github.com/bevzzz/nb/render"
 	"github.com/bevzzz/nb/schema"
 	"github.com/bevzzz/nb/schema/common"

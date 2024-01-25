@@ -60,10 +60,12 @@ func (nm *NotebookMetadata) Language() string {
 
 // Markdown defines the schema for a "markdown" cell.
 type Markdown struct {
+	Att    Attachments            `json:"attachments,omitempty"`
 	Source common.MultilineString `json:"source"`
 }
 
 var _ schema.Cell = (*Markdown)(nil)
+var _ schema.HasAttachments = (*Markdown)(nil)
 
 func (md *Markdown) Type() schema.CellType {
 	return schema.Markdown
@@ -77,13 +79,19 @@ func (md *Markdown) Text() []byte {
 	return md.Source.Text()
 }
 
+func (md *Markdown) Attachments() schema.Attachments {
+	return md.Att
+}
+
 // Raw defines the schema for a "raw" cell.
 type Raw struct {
+	Att      Attachments            `json:"attachments,omitempty"`
 	Source   common.MultilineString `json:"source"`
 	Metadata RawCellMetadata        `json:"metadata"`
 }
 
 var _ schema.Cell = (*Raw)(nil)
+var _ schema.HasAttachments = (*Raw)(nil)
 
 func (raw *Raw) Type() schema.CellType {
 	return schema.Raw
@@ -95,6 +103,23 @@ func (raw *Raw) MimeType() string {
 
 func (raw *Raw) Text() []byte {
 	return raw.Source.Text()
+}
+
+func (raw *Raw) Attachments() schema.Attachments {
+	return raw.Att
+}
+
+// Attachments store mime-bundles keyed by filename.
+type Attachments map[string]MimeBundle
+
+var _ schema.Attachments = new(Attachments)
+
+func (att Attachments) MimeBundle(filename string) schema.MimeBundle {
+	mb, ok := att[filename]
+	if !ok {
+		return nil
+	}
+	return mb
 }
 
 // RawCellMetadata may specify a target conversion format.
