@@ -10,6 +10,11 @@ Markdown (and raw) cells can have a number of attachments, typically inline imag
 
 `goldmark-jupyter` helps [`goldmark`](https://github.com/yuin/goldmark) recognise [cell attachments](https://nbformat.readthedocs.io/en/latest/format_description.html#cell-attachments) and include them in the rendered markdown correctly.
 
+
+| `goldmark`  | `goldmark-jupyter` |
+| ----------- | ----------- |
+| ![img](./assets/goldmark.png) | ![img](./assets/goldmark-jupyter.png)       |
+
 ## Installation
 
 ```sh
@@ -44,7 +49,7 @@ if err := c.Convert(io.Stdout, b); err != nil {
 }
 ```
 
-`Attachments` will extend the default `goldmark.Markdown` with custom link parser and image render function. The renderer can be configured with standard `html.Option`:
+`Attachments` will extend the default `goldmark.Markdown` with a custom link parser and an image renderer. Quite naturally, this renderer accepts `html.Options` which can be passed to the constructor:
 
 ```go
 import (
