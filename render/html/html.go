@@ -77,8 +77,8 @@ func (r *Renderer) renderCode(w io.Writer, cell schema.Cell) error {
 		return nil
 	}
 
-	div.Open(w, attributes{"class": {"cm-editor", "cm-s-jupyter"}})
-	div.Open(w, attributes{"class": {"highlight", "hl-ipython3"}})
+	div.Open(w, attributes{"class": {"cm-editor", "cm-s-jupyter"}}, true)
+	div.Open(w, attributes{"class": {"highlight", "hl-ipython3"}}, true)
 
 	io.WriteString(w, "<pre><code class=\"language-") // TODO: not sure if that's useful here
 	io.WriteString(w, code.Language())
