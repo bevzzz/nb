@@ -41,7 +41,7 @@ func (wr *Wrapper) Wrap(w io.Writer, cell schema.Cell, render render.RenderCellF
 		ct = "jp-RawCell"
 	}
 
-	div.Open(w, attributes{"class": {"jp-Cell", ct, "jp-Notebook-cell"}})
+	div.Open(w, attributes{"class": {"jp-Cell", ct, "jp-Notebook-cell"}}, true)
 	render(w, cell)
 	div.Close(w)
 	return nil
@@ -50,19 +50,19 @@ func (wr *Wrapper) Wrap(w io.Writer, cell schema.Cell, render render.RenderCellF
 func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.RenderCellFunc) error {
 	div.Open(w, attributes{
 		"class":    {"jp-Cell-inputWrapper"},
-		"tabindex": {0}})
+		"tabindex": {0}}, true)
 
-	div.Open(w, attributes{"class": {"jp-Collapser", "jp-InputCollapser", "jp-Cell-inputCollapser"}})
+	div.Open(w, attributes{"class": {"jp-Collapser", "jp-InputCollapser", "jp-Cell-inputCollapser"}}, true)
 	io.WriteString(w, " ")
 	div.Close(w)
 
 	// TODO: add collapser-child <div class="jp-Collapser-child"></div> and collapsing functionality
 	// Pure CSS Collapsible: https://www.digitalocean.com/community/tutorials/css-collapsible
 
-	div.Open(w, attributes{"class": {"jp-InputArea", "jp-Cell-inputArea"}})
+	div.Open(w, attributes{"class": {"jp-InputArea", "jp-Cell-inputArea"}}, true)
 
 	// Prompt In:[1]
-	div.Open(w, attributes{"class": {"jp-InputPrompt", "jp-InputArea-prompt"}})
+	div.Open(w, attributes{"class": {"jp-InputPrompt", "jp-InputArea-prompt"}}, false)
 	if ex, ok := cell.(interface{ ExecutionCount() int }); ok {
 		fmt.Fprintf(w, "In\u00a0[%d]:", ex.ExecutionCount())
 	}
@@ -78,7 +78,7 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 				"jp-InputArea-editor",
 			},
 			"data-type": {"inline"},
-		})
+		}, true)
 	} else if isMd {
 		div.Open(w, attributes{
 			"class": {
@@ -87,7 +87,7 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 				"jp-RenderedHTMLCommon",
 			},
 			"data-mime-type": {common.MarkdownText},
-		})
+		}, true)
 	}
 
 	// Cell itself
@@ -103,9 +103,9 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 }
 
 func (wr *Wrapper) WrapOutput(w io.Writer, cell schema.Outputter, render render.RenderCellFunc) error {
-	div.Open(w, attributes{"class": {"jp-Cell-outputWrapper"}})
+	div.Open(w, attributes{"class": {"jp-Cell-outputWrapper"}}, true)
 	div.OpenClose(w, attributes{"class": {"jp-Collapser", "jp-OutputCollapser", "jp-Cell-outputCollapser"}})
-	div.Open(w, attributes{"class": {"jp-OutputArea jp-Cell-outputArea"}})
+	div.Open(w, attributes{"class": {"jp-OutputArea jp-Cell-outputArea"}}, true)
 
 	// TODO: see how application/json would be handled
 	// TODO: jp-RenderedJavaScript is a thing and so is jp-RenderedLatex (but I don't think we need to do anything about the latter)
@@ -147,10 +147,10 @@ func (wr *Wrapper) WrapOutput(w io.Writer, cell schema.Outputter, render render.
 
 	// Looks like this will always wrap the whole output area!
 	if child {
-		div.Open(w, attributes{"class": {childClass}})
+		div.Open(w, attributes{"class": {childClass}}, true)
 	}
 
-	div.Open(w, attributes{"class": {"jp-OutputPrompt", "jp-OutputArea-prompt"}})
+	div.Open(w, attributes{"class": {"jp-OutputPrompt", "jp-OutputArea-prompt"}}, false)
 	for _, out := range cell.Outputs() {
 		if ex, ok := out.(interface{ ExecutionCount() int }); ok {
 			fmt.Fprintf(w, "Out\u00a0[%d]:", ex.ExecutionCount())
@@ -162,7 +162,7 @@ func (wr *Wrapper) WrapOutput(w io.Writer, cell schema.Outputter, render render.
 	div.Open(w, attributes{
 		"class":          {renderedClass, "jp-OutputArea-output", outputtypeclass},
 		"data-mime-type": {datamimetype},
-	})
+	}, true)
 	for _, out := range cell.Outputs() {
 		_ = render(w, out)
 	}
@@ -184,8 +184,8 @@ const (
 type tag string
 
 // Open the tag with the attributes, e.g. <div class="container" checked>.
-func (t tag) Open(w io.Writer, attrs attributes) {
-	t._open(w, attrs, true)
+func (t tag) Open(w io.Writer, attrs attributes, newline bool) {
+	t._open(w, attrs, newline)
 }
 
 func (t tag) _open(w io.Writer, attrs attributes, newline bool) {
@@ -221,7 +221,7 @@ type tagger struct {
 
 // Open opens the tag with the attributes.
 func (t *tagger) Open(tag tag, w io.Writer, attr attributes) {
-	tag.Open(w, attr)
+	tag.Open(w, attr, true) // TODO: redo
 	t.opened = append(t.opened, tag)
 }
 
