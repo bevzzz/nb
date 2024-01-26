@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/bevzzz/nb/pkg/test"
 	"github.com/bevzzz/nb/render"
-	"github.com/bevzzz/nb/render/internal/test"
 	"github.com/bevzzz/nb/schema"
 	"github.com/bevzzz/nb/schema/common"
 	"github.com/stretchr/testify/require"

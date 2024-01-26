@@ -34,6 +34,12 @@ type Cell interface {
 	Text() []byte
 }
 
+type HasAttachments interface {
+	// Attachments are only defined for v4.0 and above for markdown and raw cells
+	// and may be omitted in the JSON. Cells without attachments should return nil.
+	Attachments() Attachments
+}
+
 // CellType reports the intended cell type to the components that work
 // with notebook cells through the Cell interface.
 //
@@ -122,4 +128,11 @@ type MimeBundle interface {
 	// PlainText returns the value associated with "text/plain" mime-type if present and a nil slice otherwise.
 	// A renderer may want to fallback to this option if it is not able to render the richer mime-type.
 	PlainText() []byte
+}
+
+// Attachments are data for inline images stored as a mime-bundle keyed by filename.
+type Attachments interface {
+	// MimeBundle returns a mime-bundle associated with the filename.
+	// If no data is present for the file, implementations should return nil.
+	MimeBundle(filename string) MimeBundle
 }
