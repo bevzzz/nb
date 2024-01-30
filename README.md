@@ -70,11 +70,13 @@ c := nb.New(
 err := nb.Convert(os.Stdout, b)
 ```
 
-The snippet above uses these additional dependencies which I encourage you to check out:
+The snippet above uses these additional dependencies:
 
 - [`goldmark`](https://github.com/yuin/goldmark) with [`goldmark-jupyter`](./extension/extra/goldmark-jupyter)
 - [`chroma`](https://github.com/alecthomas/chroma) with [`nb-synth`](https://github.com/bevzzz/nb-synth)
 - [`ansihtml`](https://github.com/robert-nix/ansihtml) with built-in [`adapters.AnsiHtml`](./extension/adapter/ansi.go)
+
+It's a combination of packages that worked really well for me; I encourage you to play around with this [**example CLI**](./example/nbee) to see how it renders different kind of notebooks.
 
 Extending `nb` does not end here. Your project may already use a different Markdown renderer, or require custom handling of certain mime-/cell types, in which case I hope the existing extensions will serve as useful reference implementations.
 
