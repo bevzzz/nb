@@ -37,13 +37,13 @@ func TestAdapter(t *testing.T) {
 			name:   "AnsiHtml",
 			render: adapter.AnsiHtml(func(b []byte) []byte { return b }),
 			cell:   test.Stdout("Hi, mom!"),
-			want:   "Hi, mom!",
+			want:   "<pre>Hi, mom!</pre>",
 		},
 		{
 			name:   "AnsiHtml",
 			render: adapter.AnsiHtml(func(b []byte) []byte { return b }),
 			cell:   test.Stderr("Hi, mom!"),
-			want:   "Hi, mom!",
+			want:   "<pre>Hi, mom!</pre>",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
