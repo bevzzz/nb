@@ -20,7 +20,7 @@ Try it out:
 
 ```sh
 nbee # convert the default notebook to HTML
-nbee -f "my_notebook.ipynb" # convert you own notebooks
+nbee -f "my_notebook.ipynb" # convert your own notebooks
 ```
 
 ## Disclaimer
