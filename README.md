@@ -43,7 +43,7 @@ import (
 	synth "github.com/bevzzz/nb-synth"
 	"github.com/bevzzz/nb/extension"
 	"github.com/bevzzz/nb/extension/adapter"
-	jupyter "github.com/nb/extension/extra/goldmark-jupyter"
+	jupyter "github.com/bevzzz/nb/extension/extra/goldmark-jupyter"
 	"github.com/robert-nix/ansihtml"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
