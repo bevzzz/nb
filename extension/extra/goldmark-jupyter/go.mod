@@ -1,4 +1,4 @@
-module github.com/nb/extension/extra/goldmark-jupyter
+module github.com/bevzzz/nb/extension/extra/goldmark-jupyter
 
 go 1.18
 

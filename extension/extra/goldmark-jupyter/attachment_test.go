@@ -7,7 +7,7 @@ import (
 	"github.com/bevzzz/nb"
 	"github.com/bevzzz/nb/pkg/test"
 	"github.com/bevzzz/nb/schema"
-	jupyter "github.com/nb/extension/extra/goldmark-jupyter"
+	jupyter "github.com/bevzzz/nb/extension/extra/goldmark-jupyter"
 	"github.com/stretchr/testify/require"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/renderer/html"
