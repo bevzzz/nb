@@ -26,7 +26,11 @@ import (
 // [ansihtml]: https://github.com/robert-nix/ansihtml
 func AnsiHtml(convert func([]byte) []byte) render.RenderCellFunc {
 	return func(w io.Writer, cell schema.Cell) (err error) {
+		// Wrapping in <pre> helps preserve parts of the original
+		// formatting such as newlines and tabs.
+		io.WriteString(w, "<pre>")
 		_, err = w.Write(convert(cell.Text()))
+		io.WriteString(w, "</pre>")
 		return
 	}
 }
