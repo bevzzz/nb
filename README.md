@@ -35,7 +35,57 @@ if err != nil {
 err := nb.Convert(os.Stdout, b)
 ```
 
-Without extensions or CSS the output may look rather bland and messy. The package comes with the Jupyter's classic light theme, and you can capture it by creating a new `html.Renderer` with a `WithCSSWriter` option:
+To produce richer output `nb` relies on a **flexible extension API** and a collection of built-in adapters and standalone extensions that allow using other packages to render parts of the notebook:
+
+```go
+import (
+	"github.com/bevzzz/nb"
+	synth "github.com/bevzzz/nb-synth"
+	"github.com/bevzzz/nb/extension"
+	"github.com/bevzzz/nb/extension/adapter"
+	jupyter "github.com/nb/extension/extra/goldmark-jupyter"
+	"github.com/robert-nix/ansihtml"
+	"github.com/yuin/goldmark"
+	highlighting "github.com/yuin/goldmark-highlighting/v2"
+	
+)
+
+md := goldmark.New(
+	goldmark.WithExtensions(
+		jupyter.Attachments(),
+		highlighting.Highlighting,
+	),
+)
+
+c := nb.New(
+	nb.WithExtensions(
+		jupyter.Goldmark(md),
+		synth.Highlighting,
+		extension.NewStream(
+			adapter.AnsiHtml(ansihtml.ConvertToHTML),
+		),
+	),
+)
+
+err := nb.Convert(os.Stdout, b)
+```
+
+The snippet above uses these additional dependencies which I encourage you to check out:
+
+- [`goldmark`](https://github.com/yuin/goldmark) with [`goldmark-jupyter`](./extension/extra/goldmark-jupyter)
+- [`chroma`](https://github.com/alecthomas/chroma) with [`nb-synth`](https://github.com/bevzzz/nb-synth)
+- [`ansihtml`](https://github.com/robert-nix/ansihtml) with built-in [`adapters.AnsiHtml`](./extension/adapter/ansi.go)
+
+Extending `nb` does not end here. Your project may already use a different Markdown renderer, or require custom handling of certain mime-/cell types, in which case I hope the existing extensions will serve as useful reference implementations.
+
+### Styling the notebook: batteries included 🔋
+
+`nb` comes with the Jupyter's classic light theme, which you can capture by passing a dedicated `CSSWriter` and adding it to the final HTML.
+
+Mind that [the default theme is ~1000 lines long](./render/html/styles/jupyter.css) and might not fit the existing style in a more complex project.  
+In that case you probably want to write your own CSS.
+
+<details><summary>Click to expand</summary>
 
 ```go
 // Write both CSS and notebook's HTML to intermediate destinations
@@ -43,7 +93,7 @@ var body, css bytes.Buffer
 
 // Configure your converter
 c := nb.New(
-  nb.WithRenderOptions(
+  	nb.WithRenderOptions(
 		render.WithCellRenderers(
 			html.NewRenderer(
 				html.WithCSSWriter(&css),
@@ -57,7 +107,7 @@ if err != nil {
 	panic(err)
 }
 
-// Create the final output (could be a file)
+// Create the final output
 f, _ := os.OpenFile("notebook.html", os.O_RDWR, 0644)
 defer f.Close()
 
@@ -70,31 +120,23 @@ io.Copy(f, &body)
 f.WriteString("</body></html>")
 ```
 
-Finally, starting with `v0.2.0` you will be able to choose from a number of extensions to create neater notebooks.
+</details>
 
 ## Roadmap 🗺
 
-- **v0.2.0:**
-	- Extension API + several extension packages (will be published separately)
-		- Beautiful Markdown cells with [`goldmark`](https://github.com/yuin/goldmark)
-		- Colourful `stream` outputs with [`ansihtml`](https://github.com/robert-nix/ansihtml)
-		- JSON/XML output highlighting with [`chroma`](https://github.com/alecthomas/chroma)
-	- Support for [cell attachments](https://nbformat.readthedocs.io/en/latest/format_description.html#cell-attachments) in markdown cells
-	- Better granularity in the cell renderer registry API
 - **v0.3.0:**
-	- Support for older `nbformat` versions:
-		- `v4.*`
-		- `v3.0`
-		- `v2.0`
-	- Custom CSS
-		-  Custom class prefix / class names
-		-  Custom CSS with Go templates
+  - Support for older `nbformat` versions:
+    - `v4.*`
+    - `v3.0`
+    - `v2.0`
+  - Custom CSS (class prefix / class names).
+  I really the way [`chroma`](https://github.com/alecthomas/chroma/blob/master/formatters/html/html.go) exposes its styling API and I'll try to do something similar.
 - **v0.4.0**:
-	- Support for `v1.0` notebooks
-	- Built-in pretty-printing for JSON outputs
+  - Support for `v1.0` notebooks
+  - Built-in pretty-printing for JSON outputs
 - Other:
-	- I am curious about how `nb`'s performance measures against other popular libraries like [`nbconvert`](https://github.com/jupyter/nbconvert) (Python) and [`quarto`](https://github.com/quarto-dev/quarto-cli) (Javascript), so I want to do some benchmarking later.
-	- As of now, I am not planning on adding converters to other formats (LaTeX, PDF, reStructuredText), but I will gladly consider this if there's a need for those.
+  - I am curious about how `nb`'s performance measures against other popular libraries like [`nbconvert`](https://github.com/jupyter/nbconvert) (Python) and [`quarto`](https://github.com/quarto-dev/quarto-cli) (Javascript), so I want to do some benchmarking later.
+  - As of now, I am not planning on adding converters to other formats (LaTeX, PDF, reStructuredText), but I will gladly consider this if there's a need for those.
 
 If you have any other ideas or requests, please feel welcome to add a proposal in a new issue.
 
