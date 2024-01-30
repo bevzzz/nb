@@ -14,29 +14,29 @@ import (
 	synth "github.com/bevzzz/nb-synth"
 	"github.com/bevzzz/nb/extension"
 	"github.com/bevzzz/nb/extension/adapter"
+	jupyter "github.com/bevzzz/nb/extension/extra/goldmark-jupyter"
 	"github.com/bevzzz/nb/render"
 	"github.com/bevzzz/nb/render/html"
-	jupyter "github.com/bevzzz/nb/extension/extra/goldmark-jupyter"
 	"github.com/robert-nix/ansihtml"
 	"github.com/yuin/goldmark"
 	highlighting "github.com/yuin/goldmark-highlighting/v2"
 )
 
 var (
-	file = flag.String("f", "notebook.ipynb", "Jupyter notebook file")
+	file = flag.String("f", "", "Jupyter notebook file")
 )
-
-//go:embed notebook.ipynb
-var defaultNotebook []byte
 
 func main() {
 	flag.Parse()
-	var err error
+	if *file == "" {
+		log.Fatal("-f must be a valid path to notebook")
+	}
 
-	b := defaultNotebook
+	var b []byte
+	var err error
 	outFile := "notebook.html"
 
-	if f := *file; file != nil {
+	if f := *file; f != "" {
 		if b, err = os.ReadFile(f); err != nil {
 			log.Fatal(err)
 		}
