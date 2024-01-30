@@ -10,7 +10,6 @@ Markdown (and raw) cells can have a number of attachments, typically inline imag
 
 `goldmark-jupyter` helps [`goldmark`](https://github.com/yuin/goldmark) recognise [cell attachments](https://nbformat.readthedocs.io/en/latest/format_description.html#cell-attachments) and include them in the rendered markdown correctly.
 
-
 | `goldmark`  | `goldmark-jupyter` |
 | ----------- | ----------- |
 | ![img](./assets/goldmark.png) | ![img](./assets/goldmark-jupyter.png)       |
