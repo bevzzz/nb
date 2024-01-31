@@ -7,20 +7,30 @@
 Compile the package on the fly 🐝
 
 ```sh
-go run github.com/bevzzz/nb/example/nbee
+go run github.com/bevzzz/nb/example/nbee -f path/to/notebook.ipynb
 ```
 
 Or, install a binary 🗑
 
 ```sh
-go install github.com/bevzzz/nb/example/nbee
+# Build from source:
+git clone https://github.com/bevzzz/nb.git
+cd nb/example/nbee
+go install
+
+# Install from remote repository (Go 1.17+):
+go install github.com/bevzzz/nb/example/nbee@latest
 ```
 
 Try it out:
 
 ```sh
-nbee # convert the default notebook to HTML
-nbee -f "my_notebook.ipynb" # convert your own notebooks
+# If you already have bevzzz/nb checked out:
+cd nb/testdata
+nbee -f notebook.ipynb
+
+# Convert your own notebooks
+nbee -f my_jupyter.ipynb
 ```
 
 ## Disclaimer
