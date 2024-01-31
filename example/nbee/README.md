@@ -7,7 +7,7 @@
 Compile the package on the fly 🐝
 
 ```sh
-go run github.com/bevzzz/nb/example/nbee -f path/to/notebook.ipynb
+go run github.com/bevzzz/nb/example/nbee@latest -f path/to/notebook.ipynb
 ```
 
 Or, install a binary 🗑
