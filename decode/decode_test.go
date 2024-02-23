@@ -38,9 +38,59 @@ func TestDecodeBytes(t *testing.T) {
 			nCells int
 		}{
 			{
+				name: "v4.5",
+				json: `{
+					"nbformat": 4, "nbformat_minor": 5, "metadata": {}, "cells": [
+						{"id": "a", "cell_type": "markdown", "metadata": {}, "source": []},
+						{"id": "b", "cell_type": "markdown", "metadata": {}, "source": []}
+					]
+				}`,
+				nCells: 2,
+			},
+			{
 				name: "v4.4",
 				json: `{
 					"nbformat": 4, "nbformat_minor": 4, "metadata": {}, "cells": [
+						{"cell_type": "markdown", "metadata": {}, "source": []},
+						{"cell_type": "markdown", "metadata": {}, "source": []}
+					]
+				}`,
+				nCells: 2,
+			},
+			{
+				name: "v4.3",
+				json: `{
+					"nbformat": 4, "nbformat_minor": 3, "metadata": {}, "cells": [
+						{"cell_type": "markdown", "metadata": {}, "source": []},
+						{"cell_type": "markdown", "metadata": {}, "source": []}
+					]
+				}`,
+				nCells: 2,
+			},
+			{
+				name: "v4.2",
+				json: `{
+					"nbformat": 4, "nbformat_minor": 2, "metadata": {}, "cells": [
+						{"cell_type": "markdown", "metadata": {}, "source": []},
+						{"cell_type": "markdown", "metadata": {}, "source": []}
+					]
+				}`,
+				nCells: 2,
+			},
+			{
+				name: "v4.1",
+				json: `{
+					"nbformat": 4, "nbformat_minor": 1, "metadata": {}, "cells": [
+						{"cell_type": "markdown", "metadata": {}, "source": []},
+						{"cell_type": "markdown", "metadata": {}, "source": []}
+					]
+				}`,
+				nCells: 2,
+			},
+			{
+				name: "v4.0",
+				json: `{
+					"nbformat": 4, "nbformat_minor": 0, "metadata": {}, "cells": [
 						{"cell_type": "markdown", "metadata": {}, "source": []},
 						{"cell_type": "markdown", "metadata": {}, "source": []}
 					]

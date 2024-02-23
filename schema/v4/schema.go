@@ -11,12 +11,20 @@ import (
 )
 
 func init() {
-	decode.RegisterDecoder(version, new(decoder))
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 5}, new(decoder))
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 4}, new(decoder))
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 3}, new(decoder))
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 2}, new(decoder))
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 1}, new(decoder))
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 0}, new(decoder))
 }
 
-var version = schema.Version{Major: 4, Minor: 4}
-
+// decoder decodes cell contents and metadata for nbformat v4.4.
+// Other versions can be decoded using the same, as their schema
+// differs in ways that does not affect how the notebook is rendered.
 type decoder struct{}
+
+var _ decode.Decoder = (*decoder)(nil)
 
 func (d *decoder) DecodeMeta(data []byte) (schema.NotebookMetadata, error) {
 	var nm NotebookMetadata
