@@ -6,6 +6,7 @@ import (
 
 	"github.com/bevzzz/nb/schema"
 	"github.com/bevzzz/nb/schema/common"
+	_ "github.com/bevzzz/nb/schema/v3"
 	_ "github.com/bevzzz/nb/schema/v4"
 
 	"github.com/bevzzz/nb/decode"
@@ -94,8 +95,23 @@ func TestDecodeBytes(t *testing.T) {
 						{"cell_type": "markdown", "metadata": {}, "source": []},
 						{"cell_type": "markdown", "metadata": {}, "source": []}
 					]
-				}`,
+					}`,
 				nCells: 2,
+			},
+			{
+				name: "v3.0",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "markdown", "metadata": {}, "source": []},
+							{"cell_type": "markdown", "metadata": {}, "source": []}
+						]},
+						{"cells": [
+							{"cell_type": "markdown", "metadata": {}, "source": []}
+						]}
+					]
+				}`,
+				nCells: 3,
 			},
 		} {
 			t.Run(tt.name, func(t *testing.T) {
@@ -224,6 +240,21 @@ func TestDecodeBytes(t *testing.T) {
 					Data:     []byte("base64-encoded-image-data"),
 				},
 			},
+			{
+				name: "v3.0: no explicit mime-type",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "raw", "source": ["sometimes you just want to rawdog sqweel"]}
+						]}
+					]
+				}`,
+				want: WithAttachments{Cell: Cell{
+					Type:     schema.Raw,
+					MimeType: common.PlainText,
+					Text:     []byte("sometimes you just want to rawdog sqweel"),
+				}},
+			},
 		} {
 			t.Run(tt.name, func(t *testing.T) {
 				nb, err := decode.Bytes([]byte(tt.json))
@@ -259,9 +290,36 @@ func TestDecodeBytes(t *testing.T) {
 						{
 							"cell_type": "code", "execution_count": 5,
 							"source": ["print('Hi, mom!')"],  "outputs": [
-								{"output_type": "stream"}, {"output_type": "stream"}
+								{"output_type": "stream", "name": "stdout"},
+								{"output_type": "stream", "name": "stderr"}
 							]
 						}
+					]
+				}`,
+				want: outcome{
+					Cell: Cell{
+						Type:     schema.Code,
+						MimeType: "application/x-python", // FIXME: expect language-specific mime-type
+						Text:     []byte("print('Hi, mom!')"),
+					},
+					Language:       "javascript",
+					ExecutionCount: 5,
+					OutputLen:      2,
+				},
+			},
+			{
+				name: "v3.0",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{
+								"cell_type": "code", "language": "javascript", "prompt_number": 5,
+								"input": ["print('Hi, mom!')"],  "outputs": [
+									{"output_type": "stream", "stream": "stdout"}, 
+									{"output_type": "stream", "stream": "stderr"}
+								]
+							}
+						]}
 					]
 				}`,
 				want: outcome{
@@ -322,6 +380,28 @@ func TestDecodeBytes(t *testing.T) {
 				},
 			},
 			{
+				name: "v3.0: stream output to stdout",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "code", "outputs": [
+								{
+									"output_type": "stream", "stream": "stdout",
+									"text": ["$> ls\n", ".\n", "..\n", "nb/"]
+								}
+							]}
+						]}		
+					]
+				}`,
+				want: []output{
+					{Cell: Cell{
+						Type:     schema.Stream,
+						MimeType: common.Stdout,
+						Text:     []byte("$> ls\n.\n..\nnb/"),
+					}},
+				},
+			},
+			{
 				name: "v4.4: stream output to stderr",
 				json: `{
 					"nbformat": 4, "nbformat_minor": 4, "metadata": {},
@@ -331,6 +411,28 @@ func TestDecodeBytes(t *testing.T) {
 								"output_type": "stream", "name": "stderr",
 								"text": ["KeyError: ", "dict['unknown key']"]
 							}
+						]}
+					]
+				}`,
+				want: []output{
+					{Cell: Cell{
+						Type:     schema.Stream,
+						MimeType: common.Stderr,
+						Text:     []byte("KeyError: dict['unknown key']"),
+					}},
+				},
+			},
+			{
+				name: "v3.0: stream output to stderr",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "code", "outputs": [
+								{
+									"output_type": "stream", "stream": "stderr",
+									"text": ["KeyError: ", "dict['unknown key']"]
+								}
+							]}
 						]}
 					]
 				}`,
@@ -371,13 +473,13 @@ func TestDecodeBytes(t *testing.T) {
 						{"cell_type": "code", "outputs": [
 							{"output_type": "display_data", "metadata": {},
 								"data": {
-									"image/png":  "base64-encoded-png-image",
+									"image/png": "base64-encoded-png-image",
 									"text/plain": "<Figure size 640x480 with 1 Axes>"
 								}
 							},
 							{"output_type": "display_data", "metadata": {},
 								"data": {
-									"image/jpeg":  "base64-encoded-jpeg-image",
+									"image/jpeg": "base64-encoded-jpeg-image",
 									"text/plain": "<Figure size 100x500 with 2 Axes>"
 								}
 							},
@@ -399,6 +501,93 @@ func TestDecodeBytes(t *testing.T) {
 						Type:     schema.DisplayData,
 						MimeType: "image/jpeg",
 						Text:     []byte("base64-encoded-jpeg-image"),
+					}},
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: common.PlainText,
+						Text:     []byte("<Image url='https://image.com/?id=123' height=500>"),
+					}},
+				},
+			},
+			{
+				name: "v3.0: display_data output different recognized formats",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "code", "outputs": [
+								{"output_type": "display_data", "metadata": {},
+									"png": ["base64-encoded-png-image"],
+									"text": ["<Figure size 640x480 with 1 Axes>"]
+								},
+								{"output_type": "display_data", "metadata": {},
+									"jpeg": ["base64-encoded-jpeg-image"],
+									"text": ["<Figure size 100x500 with 2 Axes>"]
+								},
+								{"output_type": "display_data", "metadata": {},
+									"html": ["<img />"]
+								},
+								{"output_type": "display_data", "metadata": {},
+									"svg": ["<svg />"]
+								},
+								{"output_type": "display_data", "metadata": {},
+									"javascript": ["[,,,].length"]
+								},
+								{"output_type": "display_data", "metadata": {},
+									"json": ["{\"foo\": \"bar\"}"]
+								},
+								{"output_type": "display_data", "metadata": {},
+									"pdf": ["some-raw-pdf-data"]
+								},
+								{"output_type": "display_data", "metadata": {},
+									"latex": ["c = \\sqrt{a^2 + b^2}"]
+								},
+								{"output_type": "display_data", "metadata": {},
+									"text": ["<Image url='https://image.com/?id=123' height=500>"]
+								}
+							]}
+						]}
+					]
+				}`,
+				want: []output{
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: "image/png",
+						Text:     []byte("base64-encoded-png-image"),
+					}},
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: "image/jpeg",
+						Text:     []byte("base64-encoded-jpeg-image"),
+					}},
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: "text/html",
+						Text:     []byte(`<img />`),
+					}},
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: "image/svg+xml",
+						Text:     []byte(`<svg />`),
+					}},
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: "text/javascript",
+						Text:     []byte("[,,,].length"),
+					}},
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: "application/json",
+						Text:     []byte("{\"foo\": \"bar\"}"), // ????
+					}},
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: "application/pdf",
+						Text:     []byte("some-raw-pdf-data"), // ????
+					}},
+					{Cell: Cell{
+						Type:     schema.DisplayData,
+						MimeType: "application/x-latex",
+						Text:     []byte("c = \\sqrt{a^2 + b^2}"), // ????
 					}},
 					{Cell: Cell{
 						Type:     schema.DisplayData,
@@ -442,6 +631,101 @@ func TestDecodeBytes(t *testing.T) {
 				},
 			},
 			{
+				name: "v3.0: pyout (execute_result) output different recognized formats",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "code", "outputs": [
+								{"output_type": "pyout", "metadata": {},
+									"prompt_number": 42,
+									"png": ["base64-encoded-png-image"],
+									"text": ["<Figure size 640x480 with 1 Axes>"]
+								},
+								{"output_type": "pyout", "metadata": {},
+									"prompt_number": 42,
+									"jpeg": ["base64-encoded-jpeg-image"],
+									"text": ["<Figure size 100x500 with 2 Axes>"]
+								},
+								{"output_type": "pyout", "metadata": {},
+									"prompt_number": 42,
+									"html": ["<img />"]
+								},
+								{"output_type": "pyout", "metadata": {},
+									"prompt_number": 42,
+									"svg": ["<svg />"]
+								},
+								{"output_type": "pyout", "metadata": {},
+									"prompt_number": 42,
+									"javascript": ["[,,,].length"]
+								},
+								{"output_type": "pyout", "metadata": {},
+									"prompt_number": 42,
+									"json": ["{\"foo\": \"bar\"}"]
+								},
+								{"output_type": "pyout", "metadata": {},
+									"pdf": ["some-raw-pdf-data"]
+								},
+								{"output_type": "pyout", "metadata": {},
+									"prompt_number": 42,
+									"latex": ["c = \\sqrt{a^2 + b^2}"]
+								},
+								{"output_type": "pyout", "metadata": {},
+									"prompt_number": 42,
+									"text": ["<Image url='https://image.com/?id=123' height=500>"]
+								}
+							]}
+						]}
+					]
+				}`,
+				want: []output{
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: "image/png",
+						Text:     []byte("base64-encoded-png-image"),
+					}},
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: "image/jpeg",
+						Text:     []byte("base64-encoded-jpeg-image"),
+					}},
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: "text/html",
+						Text:     []byte(`<img />`),
+					}},
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: "image/svg+xml",
+						Text:     []byte(`<svg />`),
+					}},
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: "text/javascript",
+						Text:     []byte("[,,,].length"),
+					}},
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: "application/json",
+						Text:     []byte("{\"foo\": \"bar\"}"), // ????
+					}},
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: "application/pdf",
+						Text:     []byte("some-raw-pdf-data"), // ????
+					}},
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: "application/x-latex",
+						Text:     []byte("c = \\sqrt{a^2 + b^2}"), // ????
+					}},
+					{ExecutionCount: 42, Cell: Cell{
+						Type:     schema.ExecuteResult,
+						MimeType: common.PlainText,
+						Text:     []byte("<Image url='https://image.com/?id=123' height=500>"),
+					}},
+				},
+			},
+			{
 				name: "v4.4: error output",
 				json: `{
 					"nbformat": 4, "nbformat_minor": 4, "metadata": {},
@@ -467,6 +751,33 @@ func TestDecodeBytes(t *testing.T) {
 					}},
 				},
 			},
+			{
+				name: "v3.0: error output",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "code", "outputs": [
+								{
+									"output_type": "pyerr", "ename": "ZeroDivisionError", "evalue": "division by zero",
+									"traceback": [
+										"Traceback (most recent call last):",
+										"\tFile \"main.py\", line 3, in <module>",
+										"\t\tprint(n/0)",
+										"\tZeroDivisionError: division by zero"
+									]
+								}
+							]}
+						]}
+					]
+				}`,
+				want: []output{
+					{Cell: Cell{
+						Type:     schema.Error,
+						MimeType: common.Stderr,
+						Text:     []byte("Traceback (most recent call last):\n\tFile \"main.py\", line 3, in <module>\n\t\tprint(n/0)\n\tZeroDivisionError: division by zero"),
+					}},
+				},
+			},
 		} {
 			t.Run(tt.name, func(t *testing.T) {
 				nb, err := decode.Bytes([]byte(tt.json))
@@ -480,6 +791,43 @@ func TestDecodeBytes(t *testing.T) {
 					got, want := outputs[i], tt.want[i]
 					checkCell(t, got, want.Cell)
 				}
+			})
+		}
+	})
+
+	t.Run("heading cells", func(t *testing.T) {
+		for _, tt := range []struct {
+			name string
+			json string
+			want Cell
+		}{
+			{
+				name: "v3.0 used to have dedicated heading cells",
+				json: `{
+					"nbformat": 3, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{
+								"cell_type": "heading", "level": 2, 
+								"source": ["Fun facts about Ronald McDonald"], "metadata": {}
+							}
+						]}
+					]
+				}`,
+				want: Cell{
+					Type:     schema.Markdown,
+					MimeType: common.MarkdownText,
+					Text:     []byte("## Fun facts about Ronald McDonald"),
+				},
+			},
+		} {
+			t.Run(tt.name, func(t *testing.T) {
+				nb, err := decode.Bytes([]byte(tt.json))
+				require.NoError(t, err)
+
+				got := nb.Cells()
+				require.Len(t, got, 1, "expected 1 cell")
+
+				checkCell(t, got[0], tt.want)
 			})
 		}
 	})

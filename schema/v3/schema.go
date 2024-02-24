@@ -1,6 +1,7 @@
-package v4
+package v3
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -11,37 +12,33 @@ import (
 )
 
 func init() {
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 5}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 4}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 3}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 2}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 1}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 0}, new(decoder))
+	decode.RegisterDecoder(schema.Version{Major: 3, Minor: 0}, new(decoder))
 }
 
-// decoder decodes cell contents and metadata for nbformat v4.4.
-// Other versions can be decoded using the same, as their schema
-// differs in ways that does not affect how the notebook is rendered.
+// decoder decodes cell contents and metadata for nbformat v3.0.
 type decoder struct{}
 
 var _ decode.Decoder = (*decoder)(nil)
 
 func (d *decoder) ExtractCells(data []byte) ([]json.RawMessage, error) {
 	var raw struct {
-		Cells []json.RawMessage `json:"cells"`
+		Worksheets []struct {
+			Cells []json.RawMessage `json:"cells"`
+		} `json:"worksheets"`
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return nil, err
 	}
-	return raw.Cells, nil
+
+	var cells []json.RawMessage
+	for i := range raw.Worksheets {
+		cells = append(cells, raw.Worksheets[i].Cells...)
+	}
+	return cells, nil
 }
 
 func (d *decoder) DecodeMeta(data []byte) (schema.NotebookMetadata, error) {
-	var nm NotebookMetadata
-	if err := json.Unmarshal(data, &nm); err != nil {
-		return nil, err
-	}
-	return &nm, nil
+	return nil, nil
 }
 
 func (d *decoder) DecodeCell(m map[string]interface{}, data []byte, meta schema.NotebookMetadata) (schema.Cell, error) {
@@ -50,10 +47,12 @@ func (d *decoder) DecodeCell(m map[string]interface{}, data []byte, meta schema.
 	switch ct = m["cell_type"]; ct {
 	case "markdown":
 		c = &Markdown{}
+	case "heading":
+		c = &Heading{}
 	case "raw":
 		c = &Raw{}
 	case "code":
-		c = &Code{Lang: meta.Language()}
+		c = &Code{}
 	default:
 		return nil, fmt.Errorf("unknown cell type %q", ct)
 	}
@@ -63,27 +62,12 @@ func (d *decoder) DecodeCell(m map[string]interface{}, data []byte, meta schema.
 	return c, nil
 }
 
-type NotebookMetadata struct {
-	Lang struct {
-		Name    string `json:"name"`
-		Version string `json:"version"`
-	} `json:"language_info"`
-}
-
-var _ schema.NotebookMetadata = (*NotebookMetadata)(nil)
-
-func (nm *NotebookMetadata) Language() string {
-	return nm.Lang.Name
-}
-
 // Markdown defines the schema for a "markdown" cell.
 type Markdown struct {
-	Att    Attachments            `json:"attachments,omitempty"`
 	Source common.MultilineString `json:"source"`
 }
 
 var _ schema.Cell = (*Markdown)(nil)
-var _ schema.HasAttachments = (*Markdown)(nil)
 
 func (md *Markdown) Type() schema.CellType {
 	return schema.Markdown
@@ -97,19 +81,38 @@ func (md *Markdown) Text() []byte {
 	return md.Source.Text()
 }
 
-func (md *Markdown) Attachments() schema.Attachments {
-	return md.Att
+// Heading is a dedicated cell type which represent a heading in a Jupyter notebook.
+// This type is deprecated in the later versions and the content is stored as markdown instead.
+//
+// Heading cell behaves exactly like a markdown cell, decorating its source with the
+// appropriate number of heading signs (#).
+type Heading struct {
+	Source common.MultilineString `json:"source"`
+	Level  int
+}
+
+var _ schema.Cell = (*Heading)(nil)
+
+func (h *Heading) Type() schema.CellType {
+	return schema.Markdown
+}
+
+func (h *Heading) MimeType() string {
+	return common.MarkdownText
+}
+
+func (h *Heading) Text() []byte {
+	hashes := append(bytes.Repeat([]byte("#"), h.Level), " "...)
+	return append(hashes, h.Source.Text()...)
 }
 
 // Raw defines the schema for a "raw" cell.
 type Raw struct {
-	Att      Attachments            `json:"attachments,omitempty"`
 	Source   common.MultilineString `json:"source"`
 	Metadata RawCellMetadata        `json:"metadata"`
 }
 
 var _ schema.Cell = (*Raw)(nil)
-var _ schema.HasAttachments = (*Raw)(nil)
 
 func (raw *Raw) Type() schema.CellType {
 	return schema.Raw
@@ -121,23 +124,6 @@ func (raw *Raw) MimeType() string {
 
 func (raw *Raw) Text() []byte {
 	return raw.Source.Text()
-}
-
-func (raw *Raw) Attachments() schema.Attachments {
-	return raw.Att
-}
-
-// Attachments store mime-bundles keyed by filename.
-type Attachments map[string]MimeBundle
-
-var _ schema.Attachments = new(Attachments)
-
-func (att Attachments) MimeBundle(filename string) schema.MimeBundle {
-	mb, ok := att[filename]
-	if !ok {
-		return nil
-	}
-	return mb
 }
 
 // RawCellMetadata may specify a target conversion format.
@@ -160,10 +146,10 @@ func (raw *RawCellMetadata) MimeType() string {
 
 // Code defines the schema for a "code" cell.
 type Code struct {
-	Source        common.MultilineString `json:"source"`
-	TimesExecuted int                    `json:"execution_count"`
+	Source        common.MultilineString `json:"input"`
+	TimesExecuted int                    `json:"prompt_number"`
 	Out           []Output               `json:"outputs"`
-	Lang          string                 `json:"-"`
+	Lang          string                 `json:"language"`
 }
 
 var _ schema.CodeCell = (*Code)(nil)
@@ -215,9 +201,9 @@ func (out *Output) UnmarshalJSON(data []byte) error {
 		c = &StreamOutput{}
 	case "display_data":
 		c = &DisplayDataOutput{}
-	case "execute_result":
+	case "pyout":
 		c = &ExecuteResultOutput{}
-	case "error":
+	case "pyerr":
 		c = &ErrorOutput{}
 	default:
 		return fmt.Errorf("unknown output type %q", t)
@@ -235,7 +221,7 @@ func (out *Output) UnmarshalJSON(data []byte) error {
 // The output is often decorated with ANSI-color sequences, which should be handled separately.
 type StreamOutput struct {
 	// Target can be stdout or stderr.
-	Target string                 `json:"name"`
+	Target string                 `json:"stream"`
 	Source common.MultilineString `json:"text"`
 }
 
@@ -261,8 +247,8 @@ func (stream *StreamOutput) Text() []byte {
 
 // DisplayDataOutput are rich-format outputs generated by running the code in the parent cell.
 type DisplayDataOutput struct {
-	MimeBundle `json:"data"`
-	Metadata   map[string]interface{} `json:"metadata"`
+	MimeBundle
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 var _ schema.Cell = (*DisplayDataOutput)(nil)
@@ -272,17 +258,40 @@ func (dd *DisplayDataOutput) Type() schema.CellType {
 }
 
 // MimeBundle contains rich output data keyed by mime-type.
-type MimeBundle map[string]interface{}
+type MimeBundle struct {
+	PNG        common.MultilineString `json:"png,omitempty"`
+	JPEG       common.MultilineString `json:"jpeg,omitempty"`
+	HTML       common.MultilineString `json:"html,omitempty"`
+	SVG        common.MultilineString `json:"svg,omitempty"`
+	Javascript common.MultilineString `json:"javascript,omitempty"`
+	JSON       common.MultilineString `json:"json,omitempty"`
+	PDF        common.MultilineString `json:"pdf,omitempty"`
+	LaTeX      common.MultilineString `json:"latex,omitempty"`
+	Txt        common.MultilineString `json:"text,omitempty"`
+}
 
 var _ schema.MimeBundle = (*MimeBundle)(nil)
 
 // MimeType returns the richer of the mime-types present in the bundle,
 // and falls back to "text/plain" otherwise.
 func (mb MimeBundle) MimeType() string {
-	for mime := range mb {
-		if mime != common.PlainText {
-			return mime
-		}
+	switch {
+	case mb.PNG != nil:
+		return "image/png"
+	case mb.JPEG != nil:
+		return "image/jpeg"
+	case mb.HTML != nil:
+		return "text/html"
+	case mb.SVG != nil:
+		return "image/svg+xml"
+	case mb.Javascript != nil:
+		return "text/javascript"
+	case mb.JSON != nil:
+		return "application/json"
+	case mb.PDF != nil:
+		return "application/pdf"
+	case mb.LaTeX != nil:
+		return "application/x-latex"
 	}
 	return common.PlainText
 }
@@ -294,21 +303,25 @@ func (mb MimeBundle) Text() []byte {
 
 // Data returns mime-type-specific content if present and a nil slice otherwise.
 func (mb MimeBundle) Data(mime string) []byte {
-	if txt, ok := mb[mime]; ok {
-
-		switch v := txt.(type) {
-		case []byte:
-			return v
-		case string:
-			return []byte(v)
-		// case []string: TODO: handle MultilineString case
-		case map[string]interface{}:
-			// TODO(optimization): see if there's a way to keep this as raw bytes during unmarshaling to doing the work twice.
-			if b, err := json.Marshal(txt); err == nil {
-				return b
-			}
-			return nil
-		}
+	switch mime {
+	case "image/png":
+		return mb.PNG.Text()
+	case "image/jpeg":
+		return mb.JPEG.Text()
+	case "text/html":
+		return mb.HTML.Text()
+	case "image/svg+xml":
+		return mb.SVG.Text()
+	case "text/javascript":
+		return mb.Javascript.Text()
+	case "application/json":
+		return mb.JSON.Text()
+	case "application/pdf":
+		return mb.PDF.Text()
+	case "application/x-latex":
+		return mb.LaTeX.Text()
+	case common.PlainText:
+		return mb.Txt.Text()
 	}
 	return nil
 }
@@ -322,7 +335,7 @@ func (mb MimeBundle) PlainText() []byte {
 // Its contents are identical to those of DisplayDataOutput with the addition of the execution count.
 type ExecuteResultOutput struct {
 	DisplayDataOutput
-	TimesExecuted int `json:"execution_count"`
+	TimesExecuted int `json:"prompt_number"`
 }
 
 var _ schema.Cell = (*ExecuteResultOutput)(nil)

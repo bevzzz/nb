@@ -2,6 +2,7 @@ package nb
 
 import (
 	// Currently supported nbformat versions:
+	_ "github.com/bevzzz/nb/schema/v3"
 	_ "github.com/bevzzz/nb/schema/v4"
 )
 
