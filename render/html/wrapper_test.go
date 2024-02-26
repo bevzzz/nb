@@ -702,7 +702,7 @@ func findFirst(n *stdhtml.Node, target string) *stdhtml.Node {
 // Add modifications are done on the copy, so the original node is not modified.
 func dropChildElements(n *stdhtml.Node) *stdhtml.Node {
 	cp := *n
-	if cp.FirstChild != nil && cp.FirstChild.Type != stdhtml.TextNode {
+	if fc := cp.FirstChild; fc != nil && (fc.Type != stdhtml.TextNode || fc.Data == "\n") {
 		cp.FirstChild = nil
 	}
 	cp.NextSibling = nil
