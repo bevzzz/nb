@@ -1,3 +1,11 @@
+// Package schema defines the common data format for elements of a Jupyter notebook.
+//
+// It is based on the [v4.4] definition, as it is stable and encompasses all the data
+// necessary for accurate rendering. Note, that schema validation is not a goal of this
+// package, and so, interfaces defined here will often omit the non-essential data,
+// e.g. metadata or fields specific to JupyterLab environment. 
+//
+// [v4.4]: https://github.com/jupyter/nbformat/blob/main/nbformat/v4/nbformat.v4.4.schema.json
 package schema
 
 import (
@@ -34,6 +42,9 @@ type Cell interface {
 	Text() []byte
 }
 
+// HasAttachments is implemented by cells which include [cell attachments].
+//
+// [cell attachments]: https://nbformat.readthedocs.io/en/latest/format_description.html#cell-attachments
 type HasAttachments interface {
 	// Attachments are only defined for v4.0 and above for markdown and raw cells
 	// and may be omitted in the JSON. Cells without attachments should return nil.

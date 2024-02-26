@@ -44,8 +44,13 @@ func (n *notebook) UnmarshalJSON(data []byte) error {
 		return fmt.Errorf("%s: notebook metadata: %w", ver, err)
 	}
 
-	n.cells = make([]schema.Cell, len(n.Notebook.Cells))
-	for i, raw := range n.Notebook.Cells {
+	cells, err := d.ExtractCells(data)
+	if err != nil {
+		return fmt.Errorf("%s: extract cells: %w", ver, err)
+	}
+
+	n.cells = make([]schema.Cell, len(cells))
+	for i, raw := range cells {
 		c := cell{meta: meta, decoder: d}
 		if err := json.Unmarshal(raw, &c); err != nil {
 			return fmt.Errorf("%s: %w", ver, err)
@@ -78,7 +83,16 @@ func (c *cell) UnmarshalJSON(data []byte) error {
 // Decoder implementations are version-aware and decode cell contents and metadata
 // based on the respective JSON schema definition.
 type Decoder interface {
+	// ExtractCells accesses the array of notebook cells.
+	//
+	// Prior to v4.0 cells were not a part of the top level structure,
+	// and were contained in "worksheets" instead.
+	ExtractCells(data []byte) ([]json.RawMessage, error)
+
+	// DecodeMeta decodes version-specific metadata.
 	DecodeMeta(data []byte) (schema.NotebookMetadata, error)
+
+	// DecodeCell decodes raw cell data to a version-specific implementation.
 	DecodeCell(v map[string]interface{}, data []byte, meta schema.NotebookMetadata) (schema.Cell, error)
 }
 
