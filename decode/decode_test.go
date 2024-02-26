@@ -113,6 +113,36 @@ func TestDecodeBytes(t *testing.T) {
 				}`,
 				nCells: 3,
 			},
+			{
+				name: "v2.0",
+				json: `{
+					"nbformat": 2, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "markdown", "metadata": {}, "source": []},
+							{"cell_type": "markdown", "metadata": {}, "source": []}
+						]},
+						{"cells": [
+							{"cell_type": "markdown", "metadata": {}, "source": []}
+						]}
+					]
+				}`,
+				nCells: 3,
+			},
+			{
+				name: "v1.0",
+				json: `{
+					"nbformat": 1, "nbformat_minor": 0, "metadata": {}, "worksheets": [
+						{"cells": [
+							{"cell_type": "markdown", "metadata": {}, "source": []},
+							{"cell_type": "markdown", "metadata": {}, "source": []}
+						]},
+						{"cells": [
+							{"cell_type": "markdown", "metadata": {}, "source": []}
+						]}
+					]
+				}`,
+				nCells: 3,
+			},
 		} {
 			t.Run(tt.name, func(t *testing.T) {
 				nb, err := decode.Bytes([]byte(tt.json))
