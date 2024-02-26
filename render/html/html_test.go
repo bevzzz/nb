@@ -76,29 +76,14 @@ func TestRenderer(t *testing.T) {
 					Lang: "python",
 				},
 				want: &node{
-					tag: "div",
-					attr: map[string][]string{
-						"class": {"cm-editor", "cm-s-jupyter"},
-					},
+					tag: "pre",
 					children: []*node{
 						{
-							tag: "div",
+							tag: "code",
 							attr: map[string][]string{
-								"class": {"highlight"},
+								"class": {"language-python"},
 							},
-							children: []*node{
-								{
-									tag: "pre",
-									children: []*node{
-										{
-											tag: "code",
-											attr: map[string][]string{
-												"class": {"language-python"},
-											},
-											content: "print('Hi, mom!')",
-										},
-									}},
-							},
+							content: "print('Hi, mom!')",
 						},
 					},
 				},

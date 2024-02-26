@@ -79,6 +79,9 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 			},
 			"data-type": {"inline"},
 		}, true)
+
+		div.Open(w, attributes{"class": {"cm-editor", "cm-s-jupyter"}}, true)
+		div.Open(w, attributes{"class": {"highlight", "hl-ipython3"}}, true)
 	} else if isMd {
 		div.Open(w, attributes{
 			"class": {
@@ -93,7 +96,11 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 	// Cell itself
 	_ = render(w, cell)
 
-	if isCode || isMd {
+	if isCode {
+		div.Close(w)
+		div.Close(w)
+		div.Close(w)
+	} else if isMd {
 		div.Close(w)
 	}
 

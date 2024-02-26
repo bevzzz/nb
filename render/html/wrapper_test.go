@@ -201,6 +201,22 @@ func TestWrapper_WrapInput(t *testing.T) {
 									},
 									"data-type": {"inline"},
 								},
+								children: []*node{
+									{
+										tag: "div",
+										attr: map[string][]string{
+											"class": {"cm-editor", "cm-s-jupyter"},
+										},
+										children: []*node{
+											{
+												tag: "div",
+												attr: map[string][]string{
+													"class": {"highlight"},
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
