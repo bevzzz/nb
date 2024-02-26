@@ -19,9 +19,10 @@ import (
 )
 
 func init() {
-	decode.RegisterDecoder(schema.Version{Major: 3, Minor: 0}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 2, Minor: 0}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 1, Minor: 0}, new(decoder))
+	d := new(decoder)
+	decode.RegisterDecoder(schema.Version{Major: 3, Minor: 0}, d)
+	decode.RegisterDecoder(schema.Version{Major: 2, Minor: 0}, d)
+	decode.RegisterDecoder(schema.Version{Major: 1, Minor: 0}, d)
 }
 
 // decoder decodes cell contents and metadata for nbformat v3.0, v2.0, and v1.0.

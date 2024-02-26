@@ -17,12 +17,13 @@ import (
 )
 
 func init() {
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 5}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 4}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 3}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 2}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 1}, new(decoder))
-	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 0}, new(decoder))
+	d := new(decoder)
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 5}, d)
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 4}, d)
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 3}, d)
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 2}, d)
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 1}, d)
+	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 0}, d)
 }
 
 // decoder decodes cell contents and metadata for nbformat v4.0.
