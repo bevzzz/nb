@@ -1,3 +1,10 @@
+// Package v3 provides a decoder for Jupyter Notebooks v1.0, v2.0, and v3.0.
+//
+// It implements the IPython Notebook v3.0 JSON Schema, which is also suitable
+// for decoding all earlier versions, as there hasn't been any breaking changes
+// to it.
+//
+// [IPython Notebook v3.0 JSON Schema]: https://github.com/jupyter/nbformat/blob/main/nbformat/v3/nbformat.v3.schema.json
 package v3
 
 import (
@@ -62,24 +69,10 @@ func (d *decoder) DecodeCell(m map[string]interface{}, data []byte, meta schema.
 	return c, nil
 }
 
-// Markdown defines the schema for a "markdown" cell.
-type Markdown struct {
-	Source common.MultilineString `json:"source"`
-}
-
-var _ schema.Cell = (*Markdown)(nil)
-
-func (md *Markdown) Type() schema.CellType {
-	return schema.Markdown
-}
-
-func (md *Markdown) MimeType() string {
-	return common.MarkdownText
-}
-
-func (md *Markdown) Text() []byte {
-	return md.Source.Text()
-}
+type (
+	Markdown = common.Markdown
+	Raw      = common.Raw
+)
 
 // Heading is a dedicated cell type which represent a heading in a Jupyter notebook.
 // This type is deprecated in the later versions and the content is stored as markdown instead.
@@ -87,61 +80,15 @@ func (md *Markdown) Text() []byte {
 // Heading cell behaves exactly like a markdown cell, decorating its source with the
 // appropriate number of heading signs (#).
 type Heading struct {
-	Source common.MultilineString `json:"source"`
-	Level  int
+	Markdown
+	Level int `json:"level"`
 }
 
 var _ schema.Cell = (*Heading)(nil)
 
-func (h *Heading) Type() schema.CellType {
-	return schema.Markdown
-}
-
-func (h *Heading) MimeType() string {
-	return common.MarkdownText
-}
-
 func (h *Heading) Text() []byte {
 	hashes := append(bytes.Repeat([]byte("#"), h.Level), " "...)
 	return append(hashes, h.Source.Text()...)
-}
-
-// Raw defines the schema for a "raw" cell.
-type Raw struct {
-	Source   common.MultilineString `json:"source"`
-	Metadata RawCellMetadata        `json:"metadata"`
-}
-
-var _ schema.Cell = (*Raw)(nil)
-
-func (raw *Raw) Type() schema.CellType {
-	return schema.Raw
-}
-
-func (raw *Raw) MimeType() string {
-	return raw.Metadata.MimeType()
-}
-
-func (raw *Raw) Text() []byte {
-	return raw.Source.Text()
-}
-
-// RawCellMetadata may specify a target conversion format.
-type RawCellMetadata struct {
-	Format      *string `json:"format"`
-	RawMimeType *string `json:"raw_mimetype"`
-}
-
-// MimeType returns a more specific mime-type if one is provided and "text/plain" otherwise.
-func (raw *RawCellMetadata) MimeType() string {
-	switch {
-	case raw.Format != nil:
-		return *raw.Format
-	case raw.RawMimeType != nil:
-		return *raw.RawMimeType
-	default:
-		return common.PlainText
-	}
 }
 
 // Code defines the schema for a "code" cell.

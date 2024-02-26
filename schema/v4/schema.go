@@ -1,3 +1,9 @@
+// Package v4 provides a decoder for Jupyter Notebooks v4.0 and later minor versions.
+//
+// It implements the IPython Notebook v4.0 JSON Schema. Other minor versions can be decoded using the same,
+// as the differences do not affect how the notebook is rendered.
+//
+// [IPython Notebook v4.0 JSON Schema]: https://github.com/jupyter/nbformat/blob/main/nbformat/v4/nbformat.v4.0.schema.json
 package v4
 
 import (
@@ -19,9 +25,7 @@ func init() {
 	decode.RegisterDecoder(schema.Version{Major: 4, Minor: 0}, new(decoder))
 }
 
-// decoder decodes cell contents and metadata for nbformat v4.4.
-// Other versions can be decoded using the same, as their schema
-// differs in ways that does not affect how the notebook is rendered.
+// decoder decodes cell contents and metadata for nbformat v4.0.
 type decoder struct{}
 
 var _ decode.Decoder = (*decoder)(nil)
@@ -78,24 +82,11 @@ func (nm *NotebookMetadata) Language() string {
 
 // Markdown defines the schema for a "markdown" cell.
 type Markdown struct {
-	Att    Attachments            `json:"attachments,omitempty"`
-	Source common.MultilineString `json:"source"`
+	common.Markdown
+	Att Attachments `json:"attachments,omitempty"`
 }
 
-var _ schema.Cell = (*Markdown)(nil)
 var _ schema.HasAttachments = (*Markdown)(nil)
-
-func (md *Markdown) Type() schema.CellType {
-	return schema.Markdown
-}
-
-func (md *Markdown) MimeType() string {
-	return common.MarkdownText
-}
-
-func (md *Markdown) Text() []byte {
-	return md.Source.Text()
-}
 
 func (md *Markdown) Attachments() schema.Attachments {
 	return md.Att
@@ -103,25 +94,11 @@ func (md *Markdown) Attachments() schema.Attachments {
 
 // Raw defines the schema for a "raw" cell.
 type Raw struct {
-	Att      Attachments            `json:"attachments,omitempty"`
-	Source   common.MultilineString `json:"source"`
-	Metadata RawCellMetadata        `json:"metadata"`
+	common.Raw
+	Att Attachments `json:"attachments,omitempty"`
 }
 
-var _ schema.Cell = (*Raw)(nil)
 var _ schema.HasAttachments = (*Raw)(nil)
-
-func (raw *Raw) Type() schema.CellType {
-	return schema.Raw
-}
-
-func (raw *Raw) MimeType() string {
-	return raw.Metadata.MimeType()
-}
-
-func (raw *Raw) Text() []byte {
-	return raw.Source.Text()
-}
 
 func (raw *Raw) Attachments() schema.Attachments {
 	return raw.Att
@@ -138,24 +115,6 @@ func (att Attachments) MimeBundle(filename string) schema.MimeBundle {
 		return nil
 	}
 	return mb
-}
-
-// RawCellMetadata may specify a target conversion format.
-type RawCellMetadata struct {
-	Format      *string `json:"format"`
-	RawMimeType *string `json:"raw_mimetype"`
-}
-
-// MimeType returns a more specific mime-type if one is provided and "text/plain" otherwise.
-func (raw *RawCellMetadata) MimeType() string {
-	switch {
-	case raw.Format != nil:
-		return *raw.Format
-	case raw.RawMimeType != nil:
-		return *raw.RawMimeType
-	default:
-		return common.PlainText
-	}
 }
 
 // Code defines the schema for a "code" cell.
