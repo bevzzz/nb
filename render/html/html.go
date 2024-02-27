@@ -15,10 +15,10 @@ type Config struct {
 
 type Option func(*Config)
 
-// WithCSSWriter
+// WithCSSWriter registers a writer for CSS stylesheet.
 func WithCSSWriter(w io.Writer) Option {
 	return func(c *Config) {
-		c.CSSWriter = &WriterOnce{w: w}
+		c.CSSWriter = w
 	}
 }
 

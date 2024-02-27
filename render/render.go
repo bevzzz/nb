@@ -70,14 +70,19 @@ func WithCellRenderers(crs ...CellRenderer) Option {
 
 // CellWrapper renders common wrapping elements for every cell type.
 type CellWrapper interface {
-	// Wrap the entire cell block.
+	// Wrap the entire cell.
 	Wrap(io.Writer, schema.Cell, RenderCellFunc) error
 
-	// Wrap input block.
+	// WrapInput wraps input block.
 	WrapInput(io.Writer, schema.Cell, RenderCellFunc) error
 
-	// Wrap output block (code cells).
+	// WrapOuput wraps output block (code cells).
 	WrapOutput(io.Writer, schema.Outputter, RenderCellFunc) error
+
+	// WrapAll wraps all cells in the notebook.
+	// This method will be called once and will receive a function
+	// to render the rest of the notebook.
+	WrapAll(io.Writer, func(io.Writer) error) error
 }
 
 // renderer is a base Renderer implementation.

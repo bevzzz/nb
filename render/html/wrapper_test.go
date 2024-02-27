@@ -19,6 +19,22 @@ import (
 
 func noopRender(w io.Writer, c schema.Cell) error { return nil }
 
+func TestWrapper_WrapAll(t *testing.T) {
+	// Arrange
+	var w html.Wrapper
+	var buf bytes.Buffer
+	want := node{tag: "div", attr: map[string][]string{
+		"class": {"jp-Notebook"},
+	}}
+
+	// Act
+	err := w.WrapAll(&buf, func(w io.Writer) error { return nil })
+	require.NoError(t, err)
+
+	// Assert
+	checkDOM(t, &buf, &want)
+}
+
 func TestWrapper_Wrap(t *testing.T) {
 	for _, tt := range []struct {
 		name string

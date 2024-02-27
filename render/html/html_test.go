@@ -67,6 +67,13 @@ func TestRenderer(t *testing.T) {
 				}},
 			},
 			{
+				name: "image/svg+xml",
+				cell: test.DisplayData("svg-image", "image/svg+xml"),
+				want: &node{tag: "img", attr: map[string][]string{
+					"src": {"data:image/svg+xml;base64, svg-image"},
+				}},
+			},
+			{
 				name: "code cell",
 				cell: &test.CodeCell{
 					Cell: test.Cell{
@@ -108,20 +115,6 @@ func TestRenderer(t *testing.T) {
 }
 
 func TestRenderer_CSSWriter(t *testing.T) {
-	t.Run("WithCSSWriter wraps in WriterOnce", func(t *testing.T) {
-		// Arrange
-		var cfg html.Config
-		opt := html.WithCSSWriter(io.Discard)
-
-		// Act
-		opt(&cfg)
-
-		// Assert
-		if _, ok := cfg.CSSWriter.(*html.WriterOnce); !ok {
-			t.Errorf("expected *html.WriterOnce, got %T", cfg.CSSWriter)
-		}
-	})
-
 	t.Run("captures correct css", func(t *testing.T) {
 		// Arrange
 		var css bytes.Buffer
@@ -134,7 +127,7 @@ func TestRenderer_CSSWriter(t *testing.T) {
 		}
 
 		// Act
-		err = r.Wrap(io.Discard, test.Markdown(""), noopRender)
+		err = r.WrapAll(io.Discard, func(w io.Writer) error { return nil })
 		require.NoError(t, err)
 
 		// Assert

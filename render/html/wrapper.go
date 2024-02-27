@@ -5,7 +5,6 @@ import (
 	"io"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/bevzzz/nb/render"
 	"github.com/bevzzz/nb/schema"
@@ -15,9 +14,8 @@ import (
 
 /*
 TODO:
-	- make class prefixes configurable (probably on the html.Renderer level).
+	- make class prefixes configurable (probably on the html.Config level).
 	- refactor to use tagger
-	- add WrapAll / WrapNotebook that would add a <div class="jp-Notebook"> (then there's no need for WriterOnce)
 */
 
 // Wrapper wraps cells in the HTML produced by the original Jupyter's nbconvert.
@@ -25,11 +23,19 @@ type Wrapper struct {
 	Config
 }
 
-func (wr *Wrapper) Wrap(w io.Writer, cell schema.Cell, render render.RenderCellFunc) error {
+var _ render.CellWrapper = (*Wrapper)(nil)
+
+func (wr *Wrapper) WrapAll(w io.Writer, render func(io.Writer) error) error {
 	if wr.CSSWriter != nil {
 		wr.CSSWriter.Write(jupyterCSS)
 	}
 
+	div.Open(w, attributes{"class": {"jp-Notebook"}}, true)
+	defer div.Close(w)
+	return render(w)
+}
+
+func (wr *Wrapper) Wrap(w io.Writer, cell schema.Cell, render render.RenderCellFunc) error {
 	var ct string
 	switch cell.Type() {
 	case schema.Markdown:
@@ -299,21 +305,5 @@ func (attrs attributes) WriteTo(w io.Writer) (n64 int64, err error) {
 		}
 		n64 += int64(n)
 	}
-	return
-}
-
-// WriterOnce writes to the writer once only.
-// TODO: move to util
-type WriterOnce struct {
-	w    io.Writer
-	once sync.Once
-}
-
-var _ io.Writer = (*WriterOnce)(nil)
-
-func (w *WriterOnce) Write(p []byte) (n int, err error) {
-	w.once.Do(func() {
-		n, err = w.w.Write(p)
-	})
 	return
 }
