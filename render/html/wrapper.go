@@ -80,9 +80,8 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 	}
 	tag.CloseLast()
 
-	isCode := cell.Type() == schema.Code
-	isMd := cell.Type() == schema.Markdown
-	if isCode {
+	switch cell.Type() {
+	case schema.Code:
 		tag.Open("div", attributes{
 			"class": {
 				"jp-CodeMirrorEditor",
@@ -94,7 +93,8 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 
 		tag.Open("div", attributes{"class": {"cm-editor", "cm-s-jupyter"}})
 		tag.Open("div", attributes{"class": {"highlight", "hl-ipython3"}})
-	} else if isMd {
+
+	case schema.Markdown:
 		tag.Open("div", attributes{
 			"class": {
 				"jp-RenderedMarkdown",
@@ -105,7 +105,6 @@ func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.Render
 		})
 	}
 
-	// Cell itself
 	_ = render(w, cell)
 	return nil
 }
@@ -115,13 +114,10 @@ func (wr *Wrapper) WrapOutput(w io.Writer, cell schema.Outputter, render render.
 	defer tag.Close()
 
 	tag.Open("div", attributes{"class": {"jp-Cell-outputWrapper"}})
-
 	tag.OpenInline("div", attributes{"class": {"jp-Collapser", "jp-OutputCollapser", "jp-Cell-outputCollapser"}})
 	tag.CloseLast()
-
 	tag.Open("div", attributes{"class": {"jp-OutputArea jp-Cell-outputArea"}})
 
-	// TODO: see how application/json would be handled
 	// TODO: jp-RenderedJavaScript is a thing and so is jp-RenderedLatex (but I don't think we need to do anything about the latter)
 
 	var child bool
@@ -155,11 +151,10 @@ func (wr *Wrapper) WrapOutput(w io.Writer, cell schema.Outputter, render render.
 	} else if strings.HasPrefix(datamimetype, "image/") {
 		renderedClass = "jp-RenderedImage"
 		child = true
-	} else if datamimetype == "application/vnd.jupyter.stderr" {
+	} else if datamimetype == common.Stderr {
 		renderedClass = "jp-RenderedText"
 	}
 
-	// Looks like this will always wrap the whole output area!
 	if child {
 		tag.Open("div", attributes{"class": {childClass}})
 	}
