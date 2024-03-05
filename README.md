@@ -9,9 +9,8 @@
 
 This package is inspired by @yuin's [`goldmark`](https://github.com/yuin/goldmark) and is designed to be as clear and extensible.
 
-The implementation follows the official [Jupyter Notebook format spec](https://nbformat.readthedocs.io/en/latest/format_description.html#the-notebook-file-format) (`nbformat`) and produces an output similar to that of [`nbconvert`](https://github.com/jupyter/nbconvert) (Jupyter's team own reference implementation) both structurally and visually.
+The implementation follows the official [Jupyter Notebook format spec](https://nbformat.readthedocs.io/en/latest/format_description.html#the-notebook-file-format) (`nbformat`) and produces an output similar to that of [`nbconvert`](https://github.com/jupyter/nbconvert) (Jupyter's team own reference implementation) both structurally and visually. It supports all major `nbformat` schema versions: `v4.0-v4.5`, `v3.0`, `v2.0`, `v1.0`.
 
-Although the current release only supports `v4.4` notebooks, support for other formats will be added soon (see the [**Roadmap**](#roadmap-)).  
 The package comes with an HTML renderer out of the box and can be extended to convert notebooks to other formats, such as LaTeX or PDF.
 
 > 🏗 This package is being actively developed: its structure and APIs might change overtime.  
@@ -126,16 +125,10 @@ f.WriteString("</body></html>")
 
 ## Roadmap 🗺
 
-- **v0.3.0:**
-  - Support for older `nbformat` versions:
-    - `v4.*`
-    - `v3.0`
-    - `v2.0`
-  - Custom CSS (class prefix / class names).
-  I really the way [`chroma`](https://github.com/alecthomas/chroma/blob/master/formatters/html/html.go) exposes its styling API and I'll try to do something similar.
 - **v0.4.0**:
-  - Support for `v1.0` notebooks
   - Built-in pretty-printing for JSON outputs
+  - Custom CSS (class prefix / class names).
+  I really like the way [`chroma`](https://github.com/alecthomas/chroma/blob/master/formatters/html/html.go) exposes its styling API and I'll try to do something similar.
 - Other:
   - I am curious about how `nb`'s performance measures against other popular libraries like [`nbconvert`](https://github.com/jupyter/nbconvert) (Python) and [`quarto`](https://github.com/quarto-dev/quarto-cli) (Javascript), so I want to do some benchmarking later.
   - As of now, I am not planning on adding converters to other formats (LaTeX, PDF, reStructuredText), but I will gladly consider this if there's a need for those.
