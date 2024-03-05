@@ -15,10 +15,10 @@ type Config struct {
 
 type Option func(*Config)
 
-// WithCSSWriter
+// WithCSSWriter registers a writer for CSS stylesheet.
 func WithCSSWriter(w io.Writer) Option {
 	return func(c *Config) {
-		c.CSSWriter = &WriterOnce{w: w}
+		c.CSSWriter = w
 	}
 }
 
@@ -77,17 +77,11 @@ func (r *Renderer) renderCode(w io.Writer, cell schema.Cell) error {
 		return nil
 	}
 
-	div.Open(w, attributes{"class": {"cm-editor", "cm-s-jupyter"}}, true)
-	div.Open(w, attributes{"class": {"highlight", "hl-ipython3"}}, true)
-
 	io.WriteString(w, "<pre><code class=\"language-") // TODO: not sure if that's useful here
 	io.WriteString(w, code.Language())
 	io.WriteString(w, "\">")
 	w.Write(code.Text())
 	io.WriteString(w, "</code></pre>")
-
-	div.Close(w)
-	div.Close(w)
 
 	return nil
 }

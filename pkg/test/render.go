@@ -17,6 +17,7 @@ type fakeWrapper struct{}
 var _ render.CellWrapper = (*fakeWrapper)(nil)
 
 func (*fakeWrapper) RegisterFuncs(render.RenderCellFuncRegistry)                    {}
+func (*fakeWrapper) WrapAll(io.Writer, func(io.Writer) error) error                 { return nil }
 func (*fakeWrapper) Wrap(w io.Writer, c schema.Cell, r render.RenderCellFunc) error { return r(w, c) }
 func (*fakeWrapper) WrapInput(w io.Writer, c schema.Cell, r render.RenderCellFunc) error {
 	return r(w, c)

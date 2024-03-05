@@ -19,6 +19,22 @@ import (
 
 func noopRender(w io.Writer, c schema.Cell) error { return nil }
 
+func TestWrapper_WrapAll(t *testing.T) {
+	// Arrange
+	var w html.Wrapper
+	var buf bytes.Buffer
+	want := node{tag: "div", attr: map[string][]string{
+		"class": {"jp-Notebook"},
+	}}
+
+	// Act
+	err := w.WrapAll(&buf, func(w io.Writer) error { return nil })
+	require.NoError(t, err)
+
+	// Assert
+	checkDOM(t, &buf, &want)
+}
+
 func TestWrapper_Wrap(t *testing.T) {
 	for _, tt := range []struct {
 		name string
@@ -200,6 +216,22 @@ func TestWrapper_WrapInput(t *testing.T) {
 										"jp-InputArea-editor",
 									},
 									"data-type": {"inline"},
+								},
+								children: []*node{
+									{
+										tag: "div",
+										attr: map[string][]string{
+											"class": {"cm-editor", "cm-s-jupyter"},
+										},
+										children: []*node{
+											{
+												tag: "div",
+												attr: map[string][]string{
+													"class": {"highlight"},
+												},
+											},
+										},
+									},
 								},
 							},
 						},
@@ -686,7 +718,7 @@ func findFirst(n *stdhtml.Node, target string) *stdhtml.Node {
 // Add modifications are done on the copy, so the original node is not modified.
 func dropChildElements(n *stdhtml.Node) *stdhtml.Node {
 	cp := *n
-	if cp.FirstChild != nil && cp.FirstChild.Type != stdhtml.TextNode {
+	if fc := cp.FirstChild; fc != nil && (fc.Type != stdhtml.TextNode || fc.Data == "\n") {
 		cp.FirstChild = nil
 	}
 	cp.NextSibling = nil
