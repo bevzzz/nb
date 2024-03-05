@@ -15,7 +15,6 @@ import (
 /*
 TODO:
 	- make class prefixes configurable (probably on the html.Config level).
-	- refactor to use tagger
 */
 
 // Wrapper wraps cells in the HTML produced by the original Jupyter's nbconvert.
@@ -26,16 +25,21 @@ type Wrapper struct {
 var _ render.CellWrapper = (*Wrapper)(nil)
 
 func (wr *Wrapper) WrapAll(w io.Writer, render func(io.Writer) error) error {
+	tag := tagger{Writer: w}
+	defer tag.Close()
+
 	if wr.CSSWriter != nil {
 		wr.CSSWriter.Write(jupyterCSS)
 	}
 
-	div.Open(w, attributes{"class": {"jp-Notebook"}}, true)
-	defer div.Close(w)
+	tag.Open("div", attributes{"class": {"jp-Notebook"}})
 	return render(w)
 }
 
 func (wr *Wrapper) Wrap(w io.Writer, cell schema.Cell, render render.RenderCellFunc) error {
+	tag := tagger{Writer: w}
+	defer tag.Close()
+
 	var ct string
 	switch cell.Type() {
 	case schema.Markdown:
@@ -47,78 +51,75 @@ func (wr *Wrapper) Wrap(w io.Writer, cell schema.Cell, render render.RenderCellF
 		ct = "jp-RawCell"
 	}
 
-	div.Open(w, attributes{"class": {"jp-Cell", ct, "jp-Notebook-cell"}}, true)
+	tag.Open("div", attributes{"class": {"jp-Cell", ct, "jp-Notebook-cell"}})
 	render(w, cell)
-	div.Close(w)
 	return nil
 }
 
 func (wr *Wrapper) WrapInput(w io.Writer, cell schema.Cell, render render.RenderCellFunc) error {
-	div.Open(w, attributes{
-		"class":    {"jp-Cell-inputWrapper"},
-		"tabindex": {0}}, true)
+	tag := tagger{Writer: w}
+	defer tag.Close()
 
-	div.Open(w, attributes{"class": {"jp-Collapser", "jp-InputCollapser", "jp-Cell-inputCollapser"}}, true)
+	tag.Open("div", attributes{
+		"class":    {"jp-Cell-inputWrapper"},
+		"tabindex": {0}})
+
+	tag.Open("div", attributes{"class": {"jp-Collapser", "jp-InputCollapser", "jp-Cell-inputCollapser"}})
 	io.WriteString(w, " ")
-	div.Close(w)
+	tag.CloseLast()
 
 	// TODO: add collapser-child <div class="jp-Collapser-child"></div> and collapsing functionality
 	// Pure CSS Collapsible: https://www.digitalocean.com/community/tutorials/css-collapsible
 
-	div.Open(w, attributes{"class": {"jp-InputArea", "jp-Cell-inputArea"}}, true)
+	tag.Open("div", attributes{"class": {"jp-InputArea", "jp-Cell-inputArea"}})
 
 	// Prompt In:[1]
-	div.Open(w, attributes{"class": {"jp-InputPrompt", "jp-InputArea-prompt"}}, false)
+	tag.OpenInline("div", attributes{"class": {"jp-InputPrompt", "jp-InputArea-prompt"}})
 	if ex, ok := cell.(interface{ ExecutionCount() int }); ok {
 		fmt.Fprintf(w, "In\u00a0[%d]:", ex.ExecutionCount())
 	}
-	div.Close(w)
+	tag.CloseLast()
 
 	isCode := cell.Type() == schema.Code
 	isMd := cell.Type() == schema.Markdown
 	if isCode {
-		div.Open(w, attributes{
+		tag.Open("div", attributes{
 			"class": {
 				"jp-CodeMirrorEditor",
 				"jp-Editor",
 				"jp-InputArea-editor",
 			},
 			"data-type": {"inline"},
-		}, true)
+		})
 
-		div.Open(w, attributes{"class": {"cm-editor", "cm-s-jupyter"}}, true)
-		div.Open(w, attributes{"class": {"highlight", "hl-ipython3"}}, true)
+		tag.Open("div", attributes{"class": {"cm-editor", "cm-s-jupyter"}})
+		tag.Open("div", attributes{"class": {"highlight", "hl-ipython3"}})
 	} else if isMd {
-		div.Open(w, attributes{
+		tag.Open("div", attributes{
 			"class": {
 				"jp-RenderedMarkdown",
 				"jp-MarkdownOutput",
 				"jp-RenderedHTMLCommon",
 			},
 			"data-mime-type": {common.MarkdownText},
-		}, true)
+		})
 	}
 
 	// Cell itself
 	_ = render(w, cell)
-
-	if isCode {
-		div.Close(w)
-		div.Close(w)
-		div.Close(w)
-	} else if isMd {
-		div.Close(w)
-	}
-
-	div.Close(w)
-	div.Close(w)
 	return nil
 }
 
 func (wr *Wrapper) WrapOutput(w io.Writer, cell schema.Outputter, render render.RenderCellFunc) error {
-	div.Open(w, attributes{"class": {"jp-Cell-outputWrapper"}}, true)
-	div.OpenClose(w, attributes{"class": {"jp-Collapser", "jp-OutputCollapser", "jp-Cell-outputCollapser"}})
-	div.Open(w, attributes{"class": {"jp-OutputArea jp-Cell-outputArea"}}, true)
+	tag := tagger{Writer: w}
+	defer tag.Close()
+
+	tag.Open("div", attributes{"class": {"jp-Cell-outputWrapper"}})
+
+	tag.OpenInline("div", attributes{"class": {"jp-Collapser", "jp-OutputCollapser", "jp-Cell-outputCollapser"}})
+	tag.CloseLast()
+
+	tag.Open("div", attributes{"class": {"jp-OutputArea jp-Cell-outputArea"}})
 
 	// TODO: see how application/json would be handled
 	// TODO: jp-RenderedJavaScript is a thing and so is jp-RenderedLatex (but I don't think we need to do anything about the latter)
@@ -160,93 +161,96 @@ func (wr *Wrapper) WrapOutput(w io.Writer, cell schema.Outputter, render render.
 
 	// Looks like this will always wrap the whole output area!
 	if child {
-		div.Open(w, attributes{"class": {childClass}}, true)
+		tag.Open("div", attributes{"class": {childClass}})
 	}
 
-	div.Open(w, attributes{"class": {"jp-OutputPrompt", "jp-OutputArea-prompt"}}, false)
+	tag.OpenInline("div", attributes{"class": {"jp-OutputPrompt", "jp-OutputArea-prompt"}})
 	for _, out := range cell.Outputs() {
 		if ex, ok := out.(interface{ ExecutionCount() int }); ok {
 			fmt.Fprintf(w, "Out\u00a0[%d]:", ex.ExecutionCount())
 			break
 		}
 	}
-	div.Close(w)
+	tag.CloseLast()
 
-	div.Open(w, attributes{
+	tag.Open("div", attributes{
 		"class":          {renderedClass, "jp-OutputArea-output", outputtypeclass},
 		"data-mime-type": {datamimetype},
-	}, true)
+	})
 	for _, out := range cell.Outputs() {
 		_ = render(w, out)
 	}
-	div.Close(w)
-
-	if child {
-		div.Close(w)
-	}
-
-	div.Close(w)
-	div.Close(w)
+	tag.CloseLast()
 	return nil
 }
 
-const (
-	div tag = "div"
-)
-
-type tag string
-
-// Open the tag with the attributes, e.g. <div class="container" checked>.
-func (t tag) Open(w io.Writer, attrs attributes, newline bool) {
-	t._open(w, attrs, newline)
-}
-
-func (t tag) _open(w io.Writer, attrs attributes, newline bool) {
-	io.WriteString(w, "<")
-	io.WriteString(w, string(t))
-	attrs.WriteTo(w)
-	io.WriteString(w, ">")
-	if newline {
-		io.WriteString(w, "\n")
-	}
-}
-
-func (t tag) Close(w io.Writer) {
-	fmt.Fprintf(w, "</%s>\n", t)
-}
-
-func (t tag) OpenClose(w io.Writer, attrs attributes) {
-	t._open(w, attrs, false)
-	t.Close(w)
-}
-
-// Empty writes the attributes in an empty-element tag, e.g. <div class="container" />.
-func (t tag) Empty(w io.Writer, attrs attributes) {
-	io.WriteString(w, "<")
-	io.WriteString(w, string(t))
-	attrs.WriteTo(w)
-	io.WriteString(w, " />")
-}
-
+// tagger is a straightforward utility for writing HTML tags.
+//
+// Example:
+//
+//	tag := tagger{Writer: os.Stdout}
+//	defer tag.Close()
+//	tag.Open("div", attributes{"class": {"box"}})
+//	tag.Open("pre", attributes{"class": {"hl", "python"}})
+//
+// tagger also supports empty tags.
 type tagger struct {
-	opened []tag
+	Writer io.Writer
+	opened []string
 }
 
 // Open opens the tag with the attributes.
-func (t *tagger) Open(tag tag, w io.Writer, attr attributes) {
-	tag.Open(w, attr, true) // TODO: redo
+func (t *tagger) Open(tag string, attr attributes) {
+	t.openTag(tag, attr, true)
+}
+
+// Open inline does not add a newline '\n' after the opening tag.
+func (t *tagger) OpenInline(tag string, attr attributes) {
+	t.openTag(tag, attr, false)
+}
+
+// Empty creates an empty HTML tag, like <input />.
+func (t *tagger) Empty(tag string, attr attributes) {
+	io.WriteString(t.Writer, "<")
+	io.WriteString(t.Writer, tag)
+	attr.WriteTo(t.Writer)
+	io.WriteString(t.Writer, " />")
+}
+
+func (t *tagger) openTag(tag string, attr attributes, newline bool) {
+	io.WriteString(t.Writer, "<")
+	io.WriteString(t.Writer, tag)
+	attr.WriteTo(t.Writer)
+	io.WriteString(t.Writer, ">")
+	if newline {
+		io.WriteString(t.Writer, "\n")
+	}
 	t.opened = append(t.opened, tag)
 }
 
 // Close closes all opened tags in reverse order.
-func (t *tagger) Close(w io.Writer) {
+// Always adds a newline after the tag.
+func (t *tagger) Close() {
 	l := len(t.opened)
 	if l == 0 {
 		return
 	}
 	for i := l - 1; i >= 0; i-- {
-		t.opened[i].Close(w)
+		t.closeTag(t.opened[i])
 	}
+}
+
+func (t *tagger) CloseLast() {
+	l := len(t.opened)
+	if l == 0 {
+		return
+	}
+	t.closeTag(t.opened[l-1])
+	t.opened = t.opened[:l-1]
+}
+
+func (t *tagger) closeTag(tag string) {
+	fmt.Fprintf(t.Writer, "</%s>\n", tag)
 }
 
 type attributes map[string][]interface{}
